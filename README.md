@@ -509,6 +509,15 @@ Conference organizers often manage speakers, attendees, sessions, venues, regist
 
 Requirements describe what the system should do, the services it provides, and the constraints on its operation. They are split into **user requirements** (high-level) and **system requirements** (detailed), and classified as **functional** or **non-functional**.
 
+## Key Terms
+
+* **Functional Requirement** — A requirement that describes a service, function, or behaviour the system must perform. It states *what* the system does (e.g. *"The system shall create a conference"*).
+* **Non-Functional Requirement (NFR)** — A requirement that constrains the system's operation rather than a specific function. It defines *how* the system must behave (e.g. performance, security, usability). Failing an NFR can make the whole system unusable.
+* **User Requirement** — A high-level, non-technical statement of what the system should do, written for customers and end-users.
+* **System Requirement** — A detailed, low-level requirement written for developers, defining exactly what must be built (a "functional specification").
+* **MOSCOW Prioritisation** — A method for ranking requirements: **Must** (mandatory), **Should** (important but not critical), **Could** (desirable), **Would** (optional future).
+* **Verifiable Requirement** — A requirement that is measurable and can be tested against a defined metric.
+
 ## 2.1 User Requirements (High-Level)
 
 These are high-level statements of the services the system is expected to provide to its users.
@@ -523,7 +532,7 @@ These are high-level statements of the services the system is expected to provid
 
 ## 2.2 System Requirements (Functional, Detailed)
 
-Detailed descriptions of system functions written as "The system shall ...". Each is prioritised using the MOSCOW method.
+> **Functional Requirement (system):** a statement of a function or service the system must perform, written as *"The system shall …"*. Each item below is prioritised using the MOSCOW method.
 
 | ID    | Priority | Functional Requirement (System)                                                                                                                                         |
 | ----- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -544,6 +553,8 @@ Detailed descriptions of system functions written as "The system shall ...". Eac
 | FR-15 | Could     | The system shall send email notifications on registration and check-in.                                                                                               |
 
 ## 2.3 Non-Functional Requirements
+
+> **Non-Functional Requirement (NFR):** a constraint on *how* the system behaves rather than *what* it does — e.g. performance, security, usability. Requirements are categorised below as **Product**, **Organizational**, or **External**, prioritised via MOSCOW, and written to be **measurable** (each has a metric/test).
 
 Non-functional requirements constrain the system. They are categorised (Product, Organizational, External), prioritised via MOSCOW, and written to be **measurable**.
 
