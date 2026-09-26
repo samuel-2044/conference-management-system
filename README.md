@@ -15,7 +15,10 @@ A full-stack web application for managing academic and professional conferences.
 * [Environment Variables](#environment-variables)
 * [Deployment](#deployment)
 * [Troubleshooting](#troubleshooting)
-* [Course Requirements & Group Deliverables](#course-requirements--group-deliverables)
+* [Requirements Analysis](#2-requirements-analysis)
+* [Work Plan](#3-work-plan)
+* [Group Members & Responsibilities](#4-group-members--responsibilities)
+* [Deliverables Status](#5-deliverables-status)
 * [License](#license)
 
 ---
@@ -507,185 +510,128 @@ Conference organizers often manage speakers, attendees, sessions, venues, regist
 
 # 2. Requirements Analysis
 
-Requirements describe what the system should do, the services it provides, and the constraints on its operation. They are split into **user requirements** (high-level) and **system requirements** (detailed), and classified as **functional** or **non-functional**.
+Requirements are split into **user requirements** (high-level) and **system requirements** (detailed), and classified as **functional** or **non-functional**.
 
-## Key Terms
-
-* **Functional Requirement** — A requirement that describes a service, function, or behaviour the system must perform. It states *what* the system does (e.g. *"The system shall create a conference"*).
-* **Non-Functional Requirement (NFR)** — A requirement that constrains the system's operation rather than a specific function. It defines *how* the system must behave (e.g. performance, security, usability). Failing an NFR can make the whole system unusable.
-* **User Requirement** — A high-level, non-technical statement of what the system should do, written for customers and end-users.
-* **System Requirement** — A detailed, low-level requirement written for developers, defining exactly what must be built (a "functional specification").
-* **MOSCOW Prioritisation** — A method for ranking requirements: **Must** (mandatory), **Should** (important but not critical), **Could** (desirable), **Would** (optional future).
-* **Verifiable Requirement** — A requirement that is measurable and can be tested against a defined metric.
+**Key Terms:** *Functional Requirement* = what the system does; *Non-Functional Requirement* = how the system behaves; *MOSCOW* = Must/Should/Could/Would prioritisation; *Verifiable* = measurable and testable.
 
 ## 2.1 User Requirements (High-Level)
 
-These are high-level statements of the services the system is expected to provide to its users.
+* Allow organisers to create/manage conferences
+* Manage speakers, attendees, venues, and sessions
+* Let attendees register for conferences/sessions and check in
+* Let speakers view assigned sessions and profile
+* Let organisers upload documents and images
+* Show dashboards and reports on registrations/attendance
+* Restrict features to authorised users (RBAC)
 
-* The system shall allow organisers to create and manage conferences (title, description, dates).
-* The system shall allow management of speakers, attendees, venues, and sessions.
-* The system shall let attendees register for conferences and sessions and check in on the day of a session.
-* The system shall let speakers view their assigned sessions and profile.
-* The system shall let organisers upload documents and images for conferences and sessions.
-* The system shall show organisers dashboards and reports on registrations and attendance.
-* The system shall restrict features to authorised users only.
+## 2.2 Functional Requirements (System-Level, MOSCOW-Prioritised)
 
-## 2.2 System Requirements (Functional, Detailed)
+| Priority | Requirement |
+|----------|-------------|
+| Must     | CRUD conferences (title, description, dates) |
+| Must     | List conferences with search/filter |
+| Must     | CRUD venues (name, building, room, capacity) |
+| Must     | CRUD sessions (title, time, venue, speakers) |
+| Must     | Assign speakers to sessions with roles |
+| Must     | Manage speaker profiles (bio, photo) |
+| Must     | Register attendees for conferences (pending/confirmed/cancelled) |
+| Must     | Register attendees for sessions with check-in |
+| Must     | Upload documents (file_key, file_url via R2) |
+| Must     | Dashboard summary (counts) |
+| Must     | Registration & attendance reports |
+| Must     | Role-based access control |
+| Must     | Health-check endpoint |
+| Should   | Prevent overlapping venue bookings |
+| Could    | Email notifications |
 
-> **Functional Requirement (system):** a statement of a function or service the system must perform, written as *"The system shall …"*. Each item below is prioritised using the MOSCOW method.
+## 2.3 Non-Functional Requirements (Measurable, Categorised)
 
-| ID    | Priority | Functional Requirement (System)                                                                                                                                         |
-| ----- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| FR-01 | Must     | The system shall create, retrieve, update, and delete a conference (title, description, start_date, end_date).                                                       |
-| FR-02 | Must     | The system shall list all conferences with search/filter by title and date range.                                                                                       |
-| FR-03 | Must     | The system shall create, update, and delete venues (name, building, room, capacity) for a conference.                                                                   |
-| FR-04 | Must     | The system shall create, update, and delete sessions (title, description, start_time, end_time, venue, speakers) for a conference.                                  |
-| FR-05 | Must     | The system shall assign one or more speakers to a session and set their role (keynote, speaker, panelist, moderator).                                                |
-| FR-06 | Must     | The system shall create and update speaker profiles (bio, photo).                                                                                                       |
-| FR-07 | Must     | The system shall register an attendee for a conference (status: pending, confirmed, cancelled).                                                                       |
-| FR-08 | Must     | The system shall register an attendee for a session and record a check-in timestamp (status: registered, attended, cancelled, no_show).                              |
-| FR-09 | Must     | The system shall upload a document and store it, returning a file_key and file_url.                                                                                   |
-| FR-10 | Must     | The system shall return a dashboard summary (counts of conferences, attendees, speakers, sessions).                                                                   |
-| FR-11 | Must     | The system shall return registration and attendance reports filtered by conference and date.                                                                          |
-| FR-12 | Must     | The system shall enforce role-based access (admin, organiser, speaker, attendee) on every request.                                                                      |
-| FR-13 | Must     | The system shall expose a health-check endpoint.                                                                                                                        |
-| FR-14 | Should   | The system shall prevent a session from being scheduled in a venue that is already booked for overlapping times.                                                       |
-| FR-15 | Could     | The system shall send email notifications on registration and check-in.                                                                                               |
-
-## 2.3 Non-Functional Requirements
-
-> **Non-Functional Requirement (NFR):** a constraint on *how* the system behaves rather than *what* it does — e.g. performance, security, usability. Requirements are categorised below as **Product**, **Organizational**, or **External**, prioritised via MOSCOW, and written to be **measurable** (each has a metric/test).
-
-Non-functional requirements constrain the system. They are categorised (Product, Organizational, External), prioritised via MOSCOW, and written to be **measurable**.
-
-### Product Requirements
-
-| ID     | Priority | Requirement                                              | Metric / Test                                                              |
-| ------ | -------- | -------------------------------------------------------- | -------------------------------------------------------------------------- |
-| NFR-01 | Must     | The system shall return 95% of API responses within 300 ms. | Load test 500 concurrent requests; 95% p95 latency ≤ 300 ms.          |
-| NFR-02 | Must     | The system shall scale automatically to 1000 concurrent users. | Run a 1000-user simultaneous load test with ≤ 5% errors.              |
-| NFR-03 | Must     | Passwords shall be hashed using bcrypt with cost factor ≥ 10. | Inspect stored hashes; no plaintext passwords in the database.      |
-| NFR-04 | Must     | A new organiser shall complete conference creation in ≤ 3 minutes. | Time-to-task test with 3 new users; average ≤ 3 min.                  |
-| NFR-05 | Must     | Uploaded documents shall be limited to 10 MB each.          | Attempt upload of an 11 MB file; upload is rejected with HTTP 413.    |
-
-### Organizational Requirements
-
-| ID     | Priority | Requirement                                              | Metric / Test                                                              |
-| ------ | -------- | -------------------------------------------------------- | -------------------------------------------------------------------------- |
-| NFR-06 | Must     | The system shall authenticate users with a unique email and password. | Validate login with invalid credentials fails; valid succeeds.        |
-| NFR-07 | Must     | The system shall enforce role-based access control per request. | Verify a speaker cannot access admin endpoints (HTTP 403).            |
-| NFR-08 | Must     | The system shall be version-controlled with Git and GitHub. | All changes present in GitHub commit history with Conventional Commits.|
-| NFR-09 | Should   | The system shall log structured events for audit.          | Verify logs contain event type, user id, and timestamp.                   |
-
-### External Requirements
-
-| ID     | Priority | Requirement                                              | Metric / Test                                                              |
-| ------ | -------- | -------------------------------------------------------- | -------------------------------------------------------------------------- |
-| NFR-10 | Must     | The system shall be hosted on Cloudflare (Pages + Workers + D1 + R2). | Confirm `wrangler.json` binds pages.dev, Workers, D1, R2.            |
-| NFR-11 | Must     | The system shall be reachable only over HTTPS.            | Run SSL Labs test; score A+ and no HTTP downgrade.                         |
-| NFR-12 | Should   | The system shall achieve ≥ 99.5% monthly uptime.           | Uptime monitoring over one month; ≤ 3.65 hours of downtime.                |
-| NFR-13 | Could     | The system shall support English and one Swahili interface. | Language toggle switches UI text without errors.                           |
+| Category | Must | Should | Could |
+|----------|------|--------|-------|
+| **Product** | 95% API ≤300ms; auto-scale 1k users; bcrypt≥10; task ≤3min; upload ≤10MB | — | — |
+| **Organizational** | Email/password auth; RBAC per request; Git+GitHub versioning | Structured audit logs | — |
+| **External** | Cloudflare Pages+Workers+D1+R2; HTTPS only (A+) | ≥99.5% monthly uptime | Swahili interface |
 
 ---
 
 # 3. Work Plan
 
-**Group C** — Task 2 submission deadline is **28/09/2026**.
+**Group C** — Task 2 submission deadline: **28/09/2026**.
 
 ### Presentation Schedule
 
-| Milestone                |       Date | Group C | Group D | Deliverable                                  |
-| ------------------------ | ---------: | ------: | ------: | -------------------------------------------- |
-| Requirements & Planning  | 18/09/2026 |    ✅    | 15/09/2026 | Requirements and project planning            |
-| System Design            | 16/10/2026 |         | 13/10/2026 | ERD, UI designs and API design              |
-| Implementation & Testing | 06/11/2026 |         |  3/11/2026 | Completed implementation and testing        |
-| Final Presentation       | 20/11/2026 |         | 24/11/2026 | System demonstration and presentation     |
+| Milestone | Date | Deliverable |
+|-----------|------|-------------|
+| Requirements & Planning | 18/09/2026 | Requirements and project planning ✅ |
+| System Design | 16/10/2026 | ERD, UI designs, API design |
+| Implementation & Testing | 06/11/2026 | Completed implementation and testing |
+| Final Presentation | 20/11/2026 | System demo and presentation |
 
-### Module-Based Work Plan
+### Module-Based Work Plan (2+ members per module)
 
-Each module is assigned to **two or more** group members and includes a deliverable and deadline.
+| Module | Assigned Members | Deadline |
+|--------|-----------------|----------|
+| User Authentication & Access Control | Samuel, Austin | 18/10/2026 |
+| Conference Management | Austin, Adachi | 18/10/2026 |
+| Venue & Session Scheduling | Jeff, Steve | 06/11/2026 |
+| Speaker Management | Steve, Fred | 06/11/2026 |
+| Attendee Registration & Check-in | Sean, Adachi | 13/11/2026 |
+| Documents & Storage | Fred, Larry | 13/11/2026 |
+| Database & API Layer | Larry, Samuel | 13/11/2026 |
+| Dashboard & Reporting | Sean, Fred | 20/11/2026 |
 
-| Module                          | Description                                                          | Assigned Members        | Deliverables                       | Date        |
-| ------------------------------- | -------------------------------------------------------------------- | ----------------------- | ---------------------------------- | ----------- |
-| User Authentication & Access Control | Login, registration, role-based access control                    | Samuel, Austin        | Auth system + RBAC implementation  | 18/10/2026 |
-| Conference Management           | Create, update, delete, list conferences                          | Austin, Adachi        | Conferences API + UI               | 18/10/2026 |
-| Venue & Session Scheduling      | Manage venues, rooms, and session timetable                       | Jeff, Steve           | Venues API + Sessions API          | 06/11/2026 |
-| Speaker Management              | Speaker profiles and session assignments                          | Steve, Fred           | Speakers API + assignments         | 06/11/2026 |
-| Attendee Registration & Check-in | Attendee profiles, registration flow, check-in logic              | Sean, Adachi          | Registration API + check-in        | 13/11/2026 |
-| Documents & Storage             | Upload pipeline to R2 and image/document URLs                     | Fred, Larry           | Documents API + R2 integration     | 13/11/2026 |
-| Database & API Layer            | D1 schema, Drizzle migrations, API contracts                      | Larry, Samuel         | D1 schema + OpenAPI spec           | 13/11/2026 |
-| Dashboard & Reporting           | Dashboard summary and registration/attendance reports             | Sean, Fred            | Reports API + dashboard UI         | 20/11/2026 |
+### Tools, Communication & Development Approach
 
----
-
-# 4. Agreed Tools & Techniques
-
-| Category           | Technology                 |
-| ------------------ | -------------------------- |
-| Version Control    | Git + GitHub               |
-| Frontend           | React + TypeScript + Vite  |
-| Styling            | Tailwind CSS               |
-| UI                 | Radix UI                   |
-| Routing            | Wouter                     |
-| State Management   | TanStack React Query       |
-| Backend            | Cloudflare Workers         |
-| Database           | Cloudflare D1              |
-| ORM                | Drizzle ORM                |
-| Storage            | Cloudflare R2              |
-| Validation         | Zod                        |
-| API Documentation  | OpenAPI                    |
-| Logging            | Pino                       |
-| CI/CD              | GitHub Actions             |
-| Deployment         | Cloudflare Pages + Workers |
-| Communication      | WhatsApp + GitHub Issues   |
-| Project Management | GitHub Projects            |
+| Category | Choice |
+|----------|--------|
+| Version Control | Git + GitHub (protected `main`, PR workflow) |
+| Frontend | React 19 + TypeScript + Vite + Tailwind CSS 4 |
+| Backend | Cloudflare Workers + TypeScript |
+| Database | Cloudflare D1 + Drizzle ORM |
+| Storage | Cloudflare R2 |
+| CI/CD | GitHub Actions + Wrangler |
+| Hosting | Cloudflare Pages + Workers |
+| Communication | WhatsApp + GitHub Issues |
+| Project Management | GitHub Projects (Kanban) |
+| Development Approach | Feature-branch PR workflow; incremental per module; weekly syncs |
 
 ---
 
-# 5. Group Members & Responsibilities
+# 4. Group Members & Responsibilities
 
-The project consists of **8 members**. Each member leads one or more modules (see the work plan in §3) and all members contribute across the modules they are assigned to.
+The project consists of **8 members**. Each member leads one or more modules (see §3).
 
-| # | Member    | Primary Module(s)                          |
-| - | --------- | ------------------------------------------ |
-| 1 | **Samuel**  | User Authentication & Access Control, Database & API Layer |
-| 2 | **Austin**  | User Authentication & Access Control, Conference Management |
-| 3 | **Adachi**  | Frontend UI Development (shared across modules) |
-| 4 | **Larry**   | Documents & Storage, Database & API Layer |
-| 5 | **Jeff**    | Venue & Session Scheduling |
-| 6 | **Sean**    | Attendee Registration & Check-in, Dashboard & Reporting |
-| 7 | **Steve**   | Venue & Session Scheduling, Speaker Management |
-| 8 | **Fred**    | Documents & Storage, Speaker Management, Dashboard & Reporting |
+| # | Member | Primary Module(s) |
+|---|--------|-------------------|
+| 1 | **Samuel** | User Authentication & Access Control, Database & API Layer |
+| 2 | **Austin** | User Authentication & Access Control, Conference Management |
+| 3 | **Adachi** | Conference Management, Attendee Registration & Check-in |
+| 4 | **Larry** | Documents & Storage, Database & API Layer |
+| 5 | **Jeff** | Venue & Session Scheduling |
+| 6 | **Sean** | Attendee Registration & Check-in, Dashboard & Reporting |
+| 7 | **Steve** | Venue & Session Scheduling, Speaker Management |
+| 8 | **Fred** | Documents & Storage, Speaker Management, Dashboard & Reporting |
 
-### Shared Responsibilities
-
-All members are responsible for:
-
-* Completing assigned tasks in their modules
-* Writing clear commit messages (Conventional Commits)
-* Testing their work
-* Keeping the team informed of progress (WhatsApp)
-* Following the GitHub workflow and code review via PRs
-* Updating relevant documentation
+**Shared (all members):** complete assigned tasks, write Conventional Commits, test work, keep team informed (WhatsApp), follow PR workflow, update docs.
 
 ---
 
-# 6. Deliverables
+# 5. Deliverables Status
 
-| Deliverable                  | Status      | Date       |
-| ---------------------------- | ----------- | ---------- |
-| Problem identification       | Completed   | 18/09/2026 |
-| Project description          | Completed   | 18/09/2026 |
-| Requirements analysis        | Completed   | 28/09/2026 |
-| User & system requirements   | Completed   | 28/09/2026 |
-| Functional requirements      | Completed   | 28/09/2026 |
-| Non-functional requirements  | Completed   | 28/09/2026 |
-| Work plan                    | Completed   | 28/09/2026 |
-| Task subdivision             | Completed   | 18/10/2026 |
-| System design (ERD + UI)     | In progress | 16/10/2026 |
-| Implementation               | Planned     | 06/11/2026 |
-| Testing                      | Planned     | 06/11/2026 |
-| Final presentation           | Planned     | 20/11/2026 |
+| Deliverable | Status | Date |
+|-------------|--------|------|
+| Problem identification | Completed | 18/09/2026 |
+| Project description | Completed | 18/09/2026 |
+| Requirements analysis | Completed | 28/09/2026 |
+| User & system requirements | Completed | 28/09/2026 |
+| Functional requirements | Completed | 28/09/2026 |
+| Non-functional requirements | Completed | 28/09/2026 |
+| Work plan | Completed | 28/09/2026 |
+| Task subdivision | Completed | 18/10/2026 |
+| System design (ERD + UI) | In progress | 16/10/2026 |
+| Implementation | Planned | 06/11/2026 |
+| Testing | Planned | 06/11/2026 |
+| Final presentation | Planned | 20/11/2026 |
 
 ---
 
