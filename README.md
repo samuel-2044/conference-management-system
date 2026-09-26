@@ -15,10 +15,7 @@ A full-stack web application for managing academic and professional conferences.
 * [Environment Variables](#environment-variables)
 * [Deployment](#deployment)
 * [Troubleshooting](#troubleshooting)
-* [Requirements Analysis](#2-requirements-analysis)
-* [Work Plan](#3-work-plan)
-* [Group Members & Responsibilities](#4-group-members--responsibilities)
-* [Deliverables Status](#5-deliverables-status)
+* [Team](#team)
 * [License](#license)
 
 ---
@@ -152,7 +149,7 @@ npm run dev
 
 ---
 
-# Project Structure
+## Project Structure
 
 ```text
 conference-management-system/
@@ -197,7 +194,7 @@ conference-management-system/
 
 ---
 
-# Database Design
+## Database Design
 
 The application uses **Cloudflare D1**, which is based on SQLite, with **Drizzle ORM** for database operations.
 
@@ -254,7 +251,7 @@ ROLES
 
 ---
 
-# API Documentation
+## API Documentation
 
 ## Base URL
 
@@ -344,7 +341,7 @@ GET /api/documents
 
 ---
 
-# Git & Team Workflow
+## Git & Team Workflow
 
 This project uses **GitHub for version control and collaboration**.
 
@@ -406,7 +403,7 @@ git commit -m "Update conference dashboard"
 
 ---
 
-# Environment Variables
+## Environment Variables
 
 Environment variables must not be committed to GitHub.
 
@@ -426,7 +423,7 @@ Do not commit passwords, API keys, tokens, or other secrets.
 
 ---
 
-# Deployment
+## Deployment
 
 The project uses Cloudflare services.
 
@@ -459,7 +456,7 @@ Cloudflare
 
 ---
 
-# Troubleshooting
+## Troubleshooting
 
 ### Port Already in Use
 
@@ -496,146 +493,32 @@ If Git reports a conflict, stop and contact the project leader before continuing
 
 ---
 
-# Course Requirements & Group Deliverables
+## Team
 
-## 1. Problem Statement
+The project consists of **8 members** working across 8 modules (2+ members per module):
 
-Conference organizers often manage speakers, attendees, sessions, venues, registrations, and documents using separate systems or spreadsheets. This can lead to duplicated information, scheduling problems, poor communication, and difficulty tracking attendance.
+| Member | Role | Primary Modules |
+|--------|------|-----------------|
+| **Samuel** | Project Leader | Auth & Access Control, Database & API Layer |
+| **Austin** | Group Leader | Auth & Access Control, Conference Management |
+| **Adachi** | Frontend Developer | Conference Management, Attendee Registration & Check-in |
+| **Larry** | Database Engineer | Documents & Storage, Database & API Layer |
+| **Jeff** | Backend Developer | Venue & Session Scheduling |
+| **Sean** | Backend Developer | Attendee Registration & Check-in, Dashboard & Reporting |
+| **Steve** | Backend Developer | Venue & Session Scheduling, Speaker Management |
+| **Fred** | Backend Developer | Documents & Storage, Speaker Management, Dashboard & Reporting |
 
-## Proposed Solution
-
-**Convene** provides a centralized conference management platform where organizers can manage conferences, speakers, attendees, venues, sessions, documents, registrations, attendance, and reports.
-
----
-
-# 2. Requirements Analysis
-
-Requirements are split into **user requirements** (high-level) and **system requirements** (detailed), and classified as **functional** or **non-functional**.
-
-**Key Terms:** *Functional Requirement* = what the system does; *Non-Functional Requirement* = how the system behaves; *MOSCOW* = Must/Should/Could/Would prioritisation; *Verifiable* = measurable and testable.
-
-## 2.1 User Requirements (High-Level)
-
-* Allow organisers to create/manage conferences
-* Manage speakers, attendees, venues, and sessions
-* Let attendees register for conferences/sessions and check in
-* Let speakers view assigned sessions and profile
-* Let organisers upload documents and images
-* Show dashboards and reports on registrations/attendance
-* Restrict features to authorised users (RBAC)
-
-## 2.2 Functional Requirements (System-Level, MOSCOW-Prioritised)
-
-| Priority | Requirement |
-|----------|-------------|
-| Must     | CRUD conferences (title, description, dates) |
-| Must     | List conferences with search/filter |
-| Must     | CRUD venues (name, building, room, capacity) |
-| Must     | CRUD sessions (title, time, venue, speakers) |
-| Must     | Assign speakers to sessions with roles |
-| Must     | Manage speaker profiles (bio, photo) |
-| Must     | Register attendees for conferences (pending/confirmed/cancelled) |
-| Must     | Register attendees for sessions with check-in |
-| Must     | Upload documents (file_key, file_url via R2) |
-| Must     | Dashboard summary (counts) |
-| Must     | Registration & attendance reports |
-| Must     | Role-based access control |
-| Must     | Health-check endpoint |
-| Should   | Prevent overlapping venue bookings |
-| Could    | Email notifications |
-
-## 2.3 Non-Functional Requirements (Measurable, Categorised)
-
-| Category | Must | Should | Could |
-|----------|------|--------|-------|
-| **Product** | 95% API ≤300ms; auto-scale 1k users; bcrypt≥10; task ≤3min; upload ≤10MB | — | — |
-| **Organizational** | Email/password auth; RBAC per request; Git+GitHub versioning | Structured audit logs | — |
-| **External** | Cloudflare Pages+Workers+D1+R2; HTTPS only (A+) | ≥99.5% monthly uptime | Swahili interface |
+**Shared responsibilities (all members):**
+* Complete assigned tasks in their modules
+* Write clear commit messages (Conventional Commits)
+* Test their work
+* Keep the team informed of progress (WhatsApp)
+* Follow the GitHub PR workflow
+* Update relevant documentation
 
 ---
 
-# 3. Work Plan
-
-**Group C** — Task 2 submission deadline: **28/09/2026**.
-
-### Presentation Schedule
-
-| Milestone | Date | Deliverable |
-|-----------|------|-------------|
-| Requirements & Planning | 18/09/2026 | Requirements and project planning ✅ |
-| System Design | 16/10/2026 | ERD, UI designs, API design |
-| Implementation & Testing | 06/11/2026 | Completed implementation and testing |
-| Final Presentation | 20/11/2026 | System demo and presentation |
-
-### Module-Based Work Plan (2+ members per module)
-
-| Module | Assigned Members | Deadline |
-|--------|-----------------|----------|
-| User Authentication & Access Control | Samuel, Austin | 18/10/2026 |
-| Conference Management | Austin, Adachi | 18/10/2026 |
-| Venue & Session Scheduling | Jeff, Steve | 06/11/2026 |
-| Speaker Management | Steve, Fred | 06/11/2026 |
-| Attendee Registration & Check-in | Sean, Adachi | 13/11/2026 |
-| Documents & Storage | Fred, Larry | 13/11/2026 |
-| Database & API Layer | Larry, Samuel | 13/11/2026 |
-| Dashboard & Reporting | Sean, Fred | 20/11/2026 |
-
-### Tools, Communication & Development Approach
-
-| Category | Choice |
-|----------|--------|
-| Version Control | Git + GitHub (protected `main`, PR workflow) |
-| Frontend | React 19 + TypeScript + Vite + Tailwind CSS 4 |
-| Backend | Cloudflare Workers + TypeScript |
-| Database | Cloudflare D1 + Drizzle ORM |
-| Storage | Cloudflare R2 |
-| CI/CD | GitHub Actions + Wrangler |
-| Hosting | Cloudflare Pages + Workers |
-| Communication | WhatsApp + GitHub Issues |
-| Project Management | GitHub Projects (Kanban) |
-| Development Approach | Feature-branch PR workflow; incremental per module; weekly syncs |
-
----
-
-# 4. Group Members & Responsibilities
-
-The project consists of **8 members**. Each member leads one or more modules (see §3).
-
-| # | Member | Primary Module(s) |
-|---|--------|-------------------|
-| 1 | **Samuel** | User Authentication & Access Control, Database & API Layer |
-| 2 | **Austin** | User Authentication & Access Control, Conference Management |
-| 3 | **Adachi** | Conference Management, Attendee Registration & Check-in |
-| 4 | **Larry** | Documents & Storage, Database & API Layer |
-| 5 | **Jeff** | Venue & Session Scheduling |
-| 6 | **Sean** | Attendee Registration & Check-in, Dashboard & Reporting |
-| 7 | **Steve** | Venue & Session Scheduling, Speaker Management |
-| 8 | **Fred** | Documents & Storage, Speaker Management, Dashboard & Reporting |
-
-**Shared (all members):** complete assigned tasks, write Conventional Commits, test work, keep team informed (WhatsApp), follow PR workflow, update docs.
-
----
-
-# 5. Deliverables Status
-
-| Deliverable | Status | Date |
-|-------------|--------|------|
-| Problem identification | Completed | 18/09/2026 |
-| Project description | Completed | 18/09/2026 |
-| Requirements analysis | Completed | 28/09/2026 |
-| User & system requirements | Completed | 28/09/2026 |
-| Functional requirements | Completed | 28/09/2026 |
-| Non-functional requirements | Completed | 28/09/2026 |
-| Work plan | Completed | 28/09/2026 |
-| Task subdivision | Completed | 18/10/2026 |
-| System design (ERD + UI) | In progress | 16/10/2026 |
-| Implementation | Planned | 06/11/2026 |
-| Testing | Planned | 06/11/2026 |
-| Final presentation | Planned | 20/11/2026 |
-
----
-
-# License
+## License
 
 This project is developed as an academic group project.
 
