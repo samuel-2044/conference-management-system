@@ -12,7 +12,6 @@ import {
   BarChart3,
   LogOut,
   Settings2,
-  ShieldCheck,
   Plus,
   ChevronRight,
 } from "lucide-react";
@@ -68,8 +67,8 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         )}
       >
         <div className="flex items-center gap-3 px-3 mb-10">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[hsl(var(--accent))] text-[hsl(var(--sidebar))]">
-            <ShieldCheck className="h-5 w-5 fill-current" />
+          <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg">
+            <img src="/favicon.svg" alt="Convene" className="h-9 w-9" />
           </div>
           <div>
             <div className="display-font text-lg font-bold tracking-tight">Convene</div>
@@ -159,8 +158,9 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               <div className="h-1 w-5 bg-[hsl(var(--sidebar-foreground))] rounded-sm mt-1.5"></div>
               <div className="h-1 w-5 bg-[hsl(var(--sidebar-foreground))] rounded-sm mt-1.5"></div>
             </button>
-            <div className="mono-font hidden text-[10px] uppercase tracking-[.18em] text-muted-foreground md:block">
-              Convene Management
+            <div className="mono-font hidden items-center gap-2 text-[10px] uppercase tracking-[.18em] text-muted-foreground md:flex">
+              <img src="/favicon.svg" alt="" className="h-5 w-5 rounded" />
+              <span>Convene Management</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
