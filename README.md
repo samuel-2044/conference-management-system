@@ -26,12 +26,23 @@ and **speaker**; admin and organiser accounts are created by the team.
 |------|-------|----------|------|
 | Samuel Makokha | samuel@convene.com | Convene@2026 | Admin |
 | Austin Omondi | austin@convene.com | Convene@2026 | Organiser |
+| Stephen Mwangi | stephen@convene.com | Convene@2026 | Speaker |
+| Sean Omondi | sean@convene.com | Convene@2026 | Attendee |
+| Fred Otieno | fred@convene.com | Convene@2026 | Attendee |
 
-Attendees and speakers create their own accounts through the signup page.
+Admin and organiser accounts are seeded. Attendees and speakers can also sign themselves
+up through the signup page.
 
 Passwords are stored as PBKDF2-SHA256 hashes. The session cookie is
 `HttpOnly; Secure; SameSite=None`, because the frontend (`*.pages.dev`) and the backend
 (`*.workers.dev`) are on different sites.
+
+### Demo data
+
+The seed also creates a sample conference — **Convene Conference 2026** — with three
+venues (Main Auditorium, Microsoft Auditorium, STMB Basement 5) and four sessions on AI,
+technology and university life. Admins and organisers can edit or delete all of it from
+the dashboard.
 
 ---
 
