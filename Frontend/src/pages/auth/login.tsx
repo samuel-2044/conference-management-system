@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Mail, Lock, Building2, Clock3, UsersRound } from "lucide-react";
+import { ArrowRight, Mail, Lock, Clock3, UsersRound, Building2 } from "lucide-react";
 
 export function LoginPage() {
   const [, setLocation] = useLocation();
@@ -44,11 +44,9 @@ export function LoginPage() {
 
       <div className="relative z-10 flex w-full items-center justify-center px-5 min-h-[100dvh]">
         {/* Left panel: Convene branding */}
-        <div className="hidden lg:flex lg:w-1/2 flex-col items-start justify-center p-10 lg:p-16">
-          <div className="inline-flex items-center gap-3 mb-8">
-            <div className="h-14 w-14 rounded-2xl bg-[hsl(var(--primary))] flex items-center justify-center text-[hsl(var(--primary-foreground))] shadow-lg shadow-[hsl(var(--primary))/0.35]">
-              <Building2 className="h-7 w-7 fill-current" />
-            </div>
+        <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center p-10 lg:p-16 text-center">
+          <div className="inline-flex flex-col items-center gap-3 mb-8">
+            <img src="/favicon.svg" alt="Convene" className="h-14 w-14 rounded-2xl" />
             <div>
               <span className="font-serif text-3xl font-bold tracking-tight text-foreground">Convene</span>
               <div className="mono-font text-[10px] uppercase tracking-[.25em] text-[hsl(var(--muted-foreground))] mt-1">
@@ -57,7 +55,7 @@ export function LoginPage() {
             </div>
           </div>
 
-          <div className="max-w-md">
+          <div className="max-w-md w-full">
             <h2 className="display-font text-4xl font-bold tracking-tight text-foreground mb-6 leading-tight">
               Welcome back<span className="text-[hsl(var(--primary))]">.</span>
             </h2>
@@ -66,7 +64,7 @@ export function LoginPage() {
             </p>
 
             <div className="space-y-4">
-              <div className="flex items-start gap-4">
+              <div className="flex flex-col items-center gap-2 text-center">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-card text-[hsl(var(--foreground))] shrink-0">
                   <Clock3 className="h-5 w-5" />
                 </div>
@@ -75,7 +73,7 @@ export function LoginPage() {
                   <div className="text-xs text-[hsl(var(--muted-foreground))]">Access your dashboard in seconds</div>
                 </div>
               </div>
-              <div className="flex items-start gap-4">
+              <div className="flex flex-col items-center gap-2 text-center">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-card text-[hsl(var(--foreground))] shrink-0">
                   <UsersRound className="h-5 w-5" />
                 </div>
@@ -84,7 +82,7 @@ export function LoginPage() {
                   <div className="text-xs text-[hsl(var(--muted-foreground))]">Admin, organiser, speaker, or attendee</div>
                 </div>
               </div>
-              <div className="flex items-start gap-4">
+              <div className="flex flex-col items-center gap-2 text-center">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-card text-[hsl(var(--foreground))] shrink-0">
                   <Building2 className="h-5 w-5" />
                 </div>
@@ -96,8 +94,8 @@ export function LoginPage() {
             </div>
           </div>
 
-          <div className="mt-auto border-t border-[hsl(var(--border))] pt-8">
-            <div className="flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))]">
+          <div className="mt-auto border-t border-[hsl(var(--border))] pt-8 w-full">
+            <div className="flex flex-col items-center gap-2 text-xs text-[hsl(var(--muted-foreground))]">
               <span className="border border-[hsl(var(--border))] rounded-full px-2 py-0.5">v1.0.0</span>
               <span>Convene Conference Management System</span>
             </div>
@@ -108,9 +106,7 @@ export function LoginPage() {
         <div className="flex flex-col items-center justify-center p-6 lg:w-1/2 lg:p-16 min-h-[560px]">
           <div className="w-full max-w-md">
             <div className="text-center mb-10">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] mx-auto mb-4 shadow-lg shadow-[hsl(var(--primary))/0.35]">
-                <Lock className="h-6 w-6 fill-current" />
-              </div>
+              <img src="/favicon.svg" alt="Convene" className="h-12 w-12 mx-auto mb-4" />
               <h1 className="display-font text-3xl font-bold tracking-tight text-foreground mb-2">Welcome back</h1>
               <p className="text-[hsl(var(--muted-foreground))] text-sm">
                 Enter your email and password to access your conference workspace.
