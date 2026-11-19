@@ -14,6 +14,8 @@ import {
   Settings2,
   Plus,
   ChevronRight,
+  Menu,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -38,6 +40,14 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/settings", label: "Settings", icon: Settings2, roles: ["admin"] },
 ];
 
+// Primary items for mobile bottom bar (visible to all roles)
+const MOBILE_BOTTOM_ITEMS = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/conferences", label: "Conferences", icon: CalendarDays },
+  { href: "/schedule", label: "Schedule", icon: Clock3 },
+  { href: "/profile", label: "Profile", icon: UserRound },
+];
+
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, logout, isAuthenticated } = useAuth();
   const [location, setLocation] = useLocation();
@@ -45,6 +55,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
   const navItems = useMemo(
     () => NAV_ITEMS.filter((item) => !user || item.roles.includes(user.role)),
+    [user],
+  );
+
+  const bottomNavItems = useMemo(
+    () => MOBILE_BOTTOM_ITEMS.filter((item) => !user || NAV_ITEMS.find((n) => n.href === item.href && n.roles.includes(user.role))),
     [user],
   );
 
@@ -61,7 +76,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
     <div className="dashboard-shell flex min-h-[100dvh] bg-background">
       <aside
         className={cn(
-          "sidebar fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar))] px-4 py-5 text-[hsl(var(--sidebar-foreground))] transition-transform duration-300",
+          "sidebar fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar))] px-4 py-5 text-[hsl(var(--sidebar-foreground))] transition-transform duration-300 ease-out",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
           "md:relative md:translate-x-0",
         )}
@@ -143,7 +158,37 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         />
       )}
 
-      <main className="flex-1 min-w-0">
+      {/* Mobile bottom navigation bar */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 md:hidden border-t border-border bg-[hsl(var(--background)/.95)] backdrop-blur-sm pb-safe"
+        data-testid="mobile-bottom-nav"
+      >
+        <div className="grid grid-cols-4 gap-1 px-2 py-2">
+          {bottomNavItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                className={cn(
+                  "flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-colors",
+                  "text-[hsl(var(--foreground)/.55)] active:bg-[hsl(var(--accent)/.15)]",
+                  isActive
+                    ? "text-[hsl(var(--primary))] bg-[hsl(var(--primary)/.1)]"
+                    : "hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--accent)/.1)]",
+                )}
+              >
+                <Icon className="h-5 w-5" />
+                <span className="text-[10px] font-medium">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+
+      <main className="flex-1 min-w-0 pb-safe md:pb-0">
         <header
           className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border/80 bg-[hsl(var(--background)/.88)] px-5 backdrop-blur-md md:px-9"
         >
@@ -151,12 +196,15 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             <button
               onClick={() => setMobileOpen((open) => !open)}
               className="rounded-md p-2 hover:bg-secondary md:hidden"
+              aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
               data-testid="button-open-navigation"
             >
-              <span className="sr-only">Toggle navigation</span>
-              <div className="h-1 w-5 bg-[hsl(var(--sidebar-foreground))] rounded-sm"></div>
-              <div className="h-1 w-5 bg-[hsl(var(--sidebar-foreground))] rounded-sm mt-1.5"></div>
-              <div className="h-1 w-5 bg-[hsl(var(--sidebar-foreground))] rounded-sm mt-1.5"></div>
+              <span className="sr-only">{mobileOpen ? "Close navigation" : "Open navigation"}</span>
+              {mobileOpen ? (
+                <X className="h-5 w-5 text-[hsl(var(--foreground))]" />
+              ) : (
+                <Menu className="h-5 w-5 text-[hsl(var(--foreground))]" />
+              )}
             </button>
             <div className="mono-font hidden items-center gap-2 text-[10px] uppercase tracking-[.18em] text-muted-foreground md:flex">
               <img src="/favicon.svg" alt="" className="h-5 w-5 rounded" />
