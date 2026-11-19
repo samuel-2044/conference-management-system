@@ -14,6 +14,20 @@ async function handleExpressRequest(
   env: Env,
   ctx: ExecutionContext,
 ): Promise<Response> {
+  // Handle CORS preflight
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": request.headers.get("origin") || "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, Cookie",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Max-Age": "86400",
+      },
+    });
+  }
+
   const url = new URL(request.url);
 
   // Read request body
@@ -218,7 +232,11 @@ async function handleExpressRequest(
 
       const webResponse = new Response(responseBody, {
         status: res.statusCode,
-        headers,
+        headers: {
+          ...headers,
+          "Access-Control-Allow-Origin": request.headers.get("origin") || "*",
+          "Access-Control-Allow-Credentials": "true",
+        },
       });
 
       resolve(webResponse);
@@ -241,7 +259,14 @@ async function handleExpressRequest(
       if (setCookie) {
         headers["set-cookie"] = setCookie;
       }
-      resolve(new Response(responseBody, { status: res.statusCode, headers }));
+      resolve(new Response(responseBody, { 
+        status: res.statusCode, 
+        headers: {
+          ...headers,
+          "Access-Control-Allow-Origin": request.headers.get("origin") || "*",
+          "Access-Control-Allow-Credentials": "true",
+        }
+      }));
     }
   });
 }
