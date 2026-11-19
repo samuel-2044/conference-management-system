@@ -231,9 +231,12 @@ const isAttendeeAvailableForSession = async (
 router.get("/dashboard/summary", authenticate, asyncHandler(async (_req, res) => {
   const db = getDb(_req);
 
-  const [confResult, speakerResult, sessionResult] = await Promise.all([
+  const [confResult, organiserResult, speakerResult, venueResult, attendeeResult, sessionResult] = await Promise.all([
     db.prepare("SELECT COUNT(*) as count FROM conferences").first(),
+    db.prepare("SELECT COUNT(*) as count FROM users WHERE role_name = 'organiser'").first(),
     db.prepare("SELECT COUNT(*) as count FROM users WHERE role_name = 'speaker'").first(),
+    db.prepare("SELECT COUNT(*) as count FROM venues").first(),
+    db.prepare("SELECT COUNT(*) as count FROM conference_attendees").first(),
     db.prepare("SELECT COUNT(*) as count FROM sessions").first(),
   ]);
 
@@ -249,9 +252,11 @@ router.get("/dashboard/summary", authenticate, asyncHandler(async (_req, res) =>
 
   res.json(
     GetDashboardSummaryResponse.parse({
-      activeConferences: (conferences.results as any[]).length,
-      totalAttendees: (confResult as { count: number })?.count ?? 0,
+      activeConferences: (confResult as { count: number })?.count ?? 0,
+      totalOrganisers: (organiserResult as { count: number })?.count ?? 0,
+      totalAttendees: (attendeeResult as { count: number })?.count ?? 0,
       totalSpeakers: (speakerResult as { count: number })?.count ?? 0,
+      totalVenues: (venueResult as { count: number })?.count ?? 0,
       totalSessions: (sessionResult as { count: number })?.count ?? 0,
       registrationTrend: [
         { label: "Mar 1", value: 42 },

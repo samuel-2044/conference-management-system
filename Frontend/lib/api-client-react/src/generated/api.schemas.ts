@@ -282,8 +282,10 @@ export type DashboardSummaryRegistrationTrendItem = {
 
 export interface DashboardSummary {
   activeConferences: number;
+  totalOrganisers: number;
   totalAttendees: number;
   totalSpeakers: number;
+  totalVenues: number;
   totalSessions: number;
   registrationTrend: DashboardSummaryRegistrationTrendItem[];
   activities: Activity[];

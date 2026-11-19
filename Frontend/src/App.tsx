@@ -53,7 +53,7 @@ const dateLabel = (date?: string) =>
 
 const timeLabel = (time?: string) =>
   time
-    ? new Date(`2024-01-01T${time}`).toLocaleTimeString("en-US", {
+    ? new Date(time.includes("T") ? time : `2024-01-01T${time}`).toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
       })
@@ -646,9 +646,11 @@ function DetailStat({
 function SimpleDetailList({
   sessions,
   empty,
+  venueMap,
 }: {
   sessions?: Session[];
   empty: string;
+  venueMap?: Map<string, string>;
 }) {
   return sessions?.length ? (
     <div className="grid gap-3">
@@ -663,7 +665,7 @@ function SimpleDetailList({
           <div className="flex-1">
             <div className="font-semibold">{session.title}</div>
             <div className="mt-1 text-xs text-muted-foreground">
-              {"TBD"}
+              {session.venueId ? (venueMap?.get(session.venueId) ?? "TBD") : "TBD"}
             </div>
           </div>
         </div>
@@ -1116,7 +1118,10 @@ function Schedule() {
   const [showCreate, setShowCreate] = useState(false);
   const sessionQuery = useListSessions({ conferenceId });
   const conferenceQuery = useListConferences();
+  const venueQuery = useListVenues();
   const sessions = sessionQuery.data ?? [];
+  const venues = venueQuery.data ?? [];
+  const venueMap = new Map(venues.map((v) => [v.id, v.name]));
 
   const grouped = sessions.reduce<Record<string, Session[]>>((acc, session) => {
     const date = session.startTime.split("T")[0];
@@ -1191,7 +1196,7 @@ function Schedule() {
                         <div>
                           <h2 className="font-semibold">{session.title}</h2>
                           <p className="mt-1 text-xs text-muted-foreground">
-                            {"TBD"}
+                            {session.venueId ? venueMap.get(session.venueId) ?? "TBD" : "TBD"}
                           </p>
                         </div>
                       </div>
@@ -1534,16 +1539,54 @@ function Reports() {
 }
 
 function Profile() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile } = useAuth();
   const [saved, setSaved] = useState(false);
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState(user?.email || "");
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    setSaveError("");
+    setIsSaving(true);
+    try {
+      await updateProfile({ name, email });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to save profile");
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm !== "DELETE") return;
+    setIsDeleting(true);
+    setDeleteError("");
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+      const response = await fetch(`${apiUrl}/api/auth/me`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error((body as { message?: string })?.message || "Failed to delete account");
+      }
+      await logout();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Failed to delete account");
+      setIsDeleting(false);
+    }
+  };
+
+  const canDelete = deleteConfirm === "DELETE" && !isDeleting;
 
   return (
     <PageFrame>
@@ -1562,40 +1605,99 @@ function Profile() {
             {((user?.role ?? "user").charAt(0).toUpperCase() + (user?.role ?? "user").slice(1))} access
           </div>
         </div>
-        <div className="rounded-xl border border-border bg-card p-6 md:p-8">
-          <div className="mb-7">
-            <h2 className="text-lg font-bold">Personal details</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              This is how your team will see you in Convene.
-            </p>
-          </div>
-          <form className="grid gap-5" onSubmit={handleSave}>
-            <Field
-              label="Full name"
-              value={name}
-              onChange={setName}
-              required
-              testId="input-profile-name"
-            />
-            <Field
-              label="Work email"
-              value={email}
-              onChange={setEmail}
-              type="email"
-              required
-              testId="input-profile-email"
-            />
-            <div className="flex items-center justify-end gap-3">
-              {saved && (
-                <span className="text-xs font-semibold text-emerald-700">
-                  Changes saved
-                </span>
-              )}
-              <Button type="submit" testId="button-save-profile">
-                Save profile
-              </Button>
+        <div className="flex flex-col gap-5">
+          <div className="rounded-xl border border-border bg-card p-6 md:p-8">
+            <div className="mb-7">
+              <h2 className="text-lg font-bold">Personal details</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                This is how your team will see you in Convene.
+              </p>
             </div>
-          </form>
+            <form className="grid gap-5" onSubmit={handleSave}>
+              {saveError && (
+                <div className="rounded-lg border border-[hsl(var(--destructive)/.3)] bg-[hsl(var(--destructive)/.08)] p-3 text-sm text-[hsl(var(--destructive))]">
+                  {saveError}
+                </div>
+              )}
+              <Field
+                label="Full name"
+                value={name}
+                onChange={setName}
+                required
+                testId="input-profile-name"
+              />
+              <Field
+                label="Work email"
+                value={email}
+                onChange={setEmail}
+                type="email"
+                required
+                testId="input-profile-email"
+              />
+              <div className="flex items-center justify-end gap-3">
+                {saved && (
+                  <span className="text-xs font-semibold text-emerald-700">
+                    Changes saved
+                  </span>
+                )}
+                <Button type="submit" testId="button-save-profile" disabled={isSaving}>
+                  {isSaving ? "Saving…" : "Save profile"}
+                </Button>
+              </div>
+            </form>
+          </div>
+
+          <div className="rounded-xl border border-[hsl(var(--destructive)/.3)] bg-card p-6 md:p-8">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-[hsl(var(--destructive))]">Delete account</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Permanently delete your account and all associated data. This action cannot be undone.
+              </p>
+            </div>
+            <div className="mb-4 rounded-lg border border-[hsl(var(--destructive)/.2)] bg-[hsl(var(--destructive)/.05)] p-4">
+              <p className="text-sm font-semibold text-[hsl(var(--destructive))]">What will be lost:</p>
+              <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-muted-foreground">
+                <li>Your profile and login access</li>
+                <li>All session registrations and check-ins</li>
+                <li>Conference registrations</li>
+                <li>Speaker profile (if applicable)</li>
+                <li>Uploaded documents</li>
+                <li>All associated data across the platform</li>
+              </ul>
+            </div>
+            {deleteError && (
+              <div className="mb-4 rounded-lg border border-[hsl(var(--destructive)/.3)] bg-[hsl(var(--destructive)/.08)] p-3 text-sm text-[hsl(var(--destructive))]">
+                {deleteError}
+              </div>
+            )}
+            <div className="flex flex-col gap-3">
+              <label className="text-sm font-semibold text-muted-foreground">
+                Type <span className="font-mono font-bold text-[hsl(var(--destructive))]">DELETE</span> to confirm:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                placeholder="Type DELETE"
+                className="h-11 w-full rounded-xl border border-input bg-background px-4 text-sm outline-none focus:border-[hsl(var(--destructive))] focus:ring-2 focus:ring-[hsl(var(--destructive))]/15 transition-all"
+                data-testid="input-delete-confirm"
+              />
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={!canDelete}
+                className={cn(
+                  "h-11 w-full rounded-xl text-sm font-semibold transition-all",
+                  canDelete
+                    ? "bg-[hsl(var(--destructive))] text-white hover:opacity-90"
+                    : "cursor-not-allowed bg-muted text-muted-foreground",
+                )}
+                data-testid="button-delete-account"
+              >
+                {isDeleting ? "Deleting account…" : "Delete my account"}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </PageFrame>

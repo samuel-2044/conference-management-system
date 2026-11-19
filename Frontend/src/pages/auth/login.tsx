@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Mail, Lock, Clock3, UsersRound, Building2 } from "lucide-react";
+import { ArrowRight, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/context/auth-context";
 
 export function LoginPage() {
   const [, setLocation] = useLocation();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -15,18 +18,7 @@ export function LoginPage() {
     setError("");
     setIsLoading(true);
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error((body as { message?: string })?.message || "Login failed");
-      }
-
+      await login(email, password);
       setLocation("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
@@ -63,33 +55,18 @@ export function LoginPage() {
               Sign in to your conference workspace to manage events, sessions, and registrations.
             </p>
 
-            <div className="space-y-4">
-              <div className="flex flex-col items-center gap-2 text-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-card text-[hsl(var(--foreground))] shrink-0">
-                  <Clock3 className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-foreground">Fast, secure sign-in</div>
-                  <div className="text-xs text-[hsl(var(--muted-foreground))]">Access your dashboard in seconds</div>
-                </div>
+            <div className="space-y-6">
+              <div className="text-center">
+                <div className="text-sm font-semibold text-foreground">Fast, secure sign-in</div>
+                <div className="text-xs text-[hsl(var(--muted-foreground))]">Access your dashboard in seconds</div>
               </div>
-              <div className="flex flex-col items-center gap-2 text-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-card text-[hsl(var(--foreground))] shrink-0">
-                  <UsersRound className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-foreground">Role-based access</div>
-                  <div className="text-xs text-[hsl(var(--muted-foreground))]">Admin, organiser, speaker, or attendee</div>
-                </div>
+              <div className="text-center">
+                <div className="text-sm font-semibold text-foreground">Role-based access</div>
+                <div className="text-xs text-[hsl(var(--muted-foreground))]">Admin, organiser, speaker, or attendee</div>
               </div>
-              <div className="flex flex-col items-center gap-2 text-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-card text-[hsl(var(--foreground))] shrink-0">
-                  <Building2 className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-foreground">Everything in one place</div>
-                  <div className="text-xs text-[hsl(var(--muted-foreground))]">Venues, sessions, and registrations</div>
-                </div>
+              <div className="text-center">
+                <div className="text-sm font-semibold text-foreground">Everything in one place</div>
+                <div className="text-xs text-[hsl(var(--muted-foreground))]">Venues, sessions, and registrations</div>
               </div>
             </div>
           </div>
@@ -120,31 +97,39 @@ export function LoginPage() {
             )}
 
             <form className="grid gap-5" onSubmit={handleSubmit}>
-              <div className="grid gap-2">
-                <Mail className="text-muted-foreground text-sm" />
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@organisation.org"
+                  placeholder="Enter your email address"
                   required
                   autoComplete="email"
-                  className="h-11 w-full rounded-xl border border-input bg-background px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 pl-10 transition-all"
+                  className="h-11 w-full rounded-xl border border-input bg-background pl-10 pr-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all"
                   data-testid="input-login-email"
                 />
               </div>
-              <div className="grid gap-2">
-                <Lock className="text-muted-foreground text-sm" />
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
                   required
                   autoComplete="current-password"
-                  className="h-11 w-full rounded-xl border border-input bg-background px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 pl-10 transition-all"
+                  className="h-11 w-full rounded-xl border border-input bg-background pl-10 pr-10 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all"
                   data-testid="input-login-password"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
               </div>
               <Button
                 type="submit"

@@ -232,11 +232,7 @@ async function handleExpressRequest(
 
       const webResponse = new Response(responseBody, {
         status: res.statusCode,
-        headers: {
-          ...headers,
-          "Access-Control-Allow-Origin": request.headers.get("origin") || "*",
-          "Access-Control-Allow-Credentials": "true",
-        },
+        headers,
       });
 
       resolve(webResponse);
@@ -259,13 +255,9 @@ async function handleExpressRequest(
       if (setCookie) {
         headers["set-cookie"] = setCookie;
       }
-      resolve(new Response(responseBody, { 
-        status: res.statusCode, 
-        headers: {
-          ...headers,
-          "Access-Control-Allow-Origin": request.headers.get("origin") || "*",
-          "Access-Control-Allow-Credentials": "true",
-        }
+      resolve(new Response(responseBody, {
+        status: res.statusCode,
+        headers,
       }));
     }
   });

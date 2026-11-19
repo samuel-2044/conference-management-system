@@ -19,8 +19,10 @@ export const HealthCheckResponse = zod.object({
  */
 export const GetDashboardSummaryResponse = zod.object({
   "activeConferences": zod.number(),
+  "totalOrganisers": zod.number(),
   "totalAttendees": zod.number(),
   "totalSpeakers": zod.number(),
+  "totalVenues": zod.number(),
   "totalSessions": zod.number(),
   "registrationTrend": zod.array(zod.object({
   "label": zod.string(),

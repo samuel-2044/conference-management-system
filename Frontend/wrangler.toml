@@ -2,7 +2,8 @@ name = "convene-management"
 compatibility_date = "2026-11-12"
 account_id = "9af746b92474d00295efddacc315dbbc"
 
-[deploy]
+[assets]
+directory = "./dist"
 
 [vars]
 VITE_API_URL = "https://convene_backend.conference-management-system-backend.workers.dev"

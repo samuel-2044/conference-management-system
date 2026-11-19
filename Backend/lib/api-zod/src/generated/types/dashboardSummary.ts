@@ -11,9 +11,11 @@ import type { Session } from './session';
 
 export interface DashboardSummary {
   activeConferences: number;
+  totalOrganisers: number;
   totalAttendees: number;
   totalSpeakers: number;
-  sessionsThisWeek: number;
+  totalVenues: number;
+  totalSessions: number;
   registrationTrend: DashboardSummaryRegistrationTrendItem[];
   activities: Activity[];
   upcomingSessions: Session[];

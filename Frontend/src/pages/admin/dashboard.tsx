@@ -1,14 +1,17 @@
 import { useAuth } from "@/context/auth-context";
+import { useGetDashboardSummary } from "@workspace/api-client-react";
 import { CalendarDays, UsersRound, UserRound, Building2, Clock3, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function AdminDashboard() {
   const { user } = useAuth();
+  const { data: summary, isLoading } = useGetDashboardSummary();
+
   const stats = [
-    { label: "Total conferences", value: "0", icon: CalendarDays },
-    { label: "Total organisers", value: "0", icon: UsersRound },
-    { label: "Total speakers", value: "0", icon: UserRound },
-    { label: "Total venues", value: "0", icon: Building2 },
+    { label: "Total conferences", value: summary?.activeConferences ?? 0, icon: CalendarDays },
+    { label: "Total organisers", value: summary?.totalOrganisers ?? 0, icon: UsersRound },
+    { label: "Total speakers", value: summary?.totalSpeakers ?? 0, icon: UserRound },
+    { label: "Total venues", value: summary?.totalVenues ?? 0, icon: Building2 },
   ];
 
   return (
@@ -25,7 +28,9 @@ export function AdminDashboard() {
           <div key={label} className="rounded-xl border border-border bg-card p-5">
             <Icon className="h-4 w-4 text-[hsl(var(--primary))]" />
             <div className="mt-5 flex items-baseline gap-1">
-              <span className="display-font text-2xl font-bold">{value}</span>
+              <span className="display-font text-2xl font-bold">
+                {isLoading ? "…" : value}
+              </span>
             </div>
             <div className="mt-1 text-sm text-muted-foreground">{label}</div>
           </div>

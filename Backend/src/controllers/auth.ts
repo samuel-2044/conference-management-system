@@ -48,18 +48,19 @@ export function signup(req: Request, res: Response): void {
       return;
     }
 
-    const { name, email, password, role } = parseResult.data;
+    const { name, email: rawEmail, password, role } = parseResult.data;
+    const email = rawEmail.toLowerCase().trim();
     const db = getDb(req);
 
     const existing = await db
-      .prepare("SELECT id FROM users WHERE email = ?")
+      .prepare("SELECT id FROM users WHERE lower(email) = ?")
       .bind(email)
       .first();
 
     if (existing) {
       res.status(409).json({
         success: false,
-        message: "An account with this email already exists",
+        message: "An account with this email already exists. Please log in instead.",
       });
       return;
     }
@@ -67,24 +68,35 @@ export function signup(req: Request, res: Response): void {
     const userId = `user-${Date.now()}`;
     const passwordHash = await hashPassword(password);
 
-    await db
-      .prepare(
-        `INSERT INTO users (id, role_id, name, email, password_hash, phone, avatar_url, role_name, status, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .bind(
-        userId,
-        ROLE_IDS[role],
-        name,
-        email,
-        passwordHash,
-        null,
-        null,
-        role,
-        "active",
-        new Date().toISOString(),
-      )
-      .run();
+    try {
+      await db
+        .prepare(
+          `INSERT INTO users (id, role_id, name, email, password_hash, phone, avatar_url, role_name, status, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(
+          userId,
+          ROLE_IDS[role],
+          name,
+          email,
+          passwordHash,
+          null,
+          null,
+          role,
+          "active",
+          new Date().toISOString(),
+        )
+        .run();
+    } catch (err: any) {
+      if (err?.message?.includes("UNIQUE") || err?.cause?.message?.includes("UNIQUE")) {
+        res.status(409).json({
+          success: false,
+          message: "An account with this email already exists. Please log in instead.",
+        });
+        return;
+      }
+      throw err;
+    }
 
     logActivity(userId, "signup", { role, email });
 
@@ -199,6 +211,112 @@ export function me(req: Request, res: Response): void {
   });
 }
 
+const UpdateMeSchema = z.object({
+  name: z.string().min(1, "Name is required").optional(),
+  email: z.string().email("Invalid email").optional(),
+});
+
+export function updateMe(req: Request, res: Response): void {
+  (async () => {
+    if (!req.user) {
+      res.status(401).json({ success: false, message: "Not authenticated" });
+      return;
+    }
+
+    const parseResult = UpdateMeSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid input",
+        errors: parseResult.error.flatten().fieldErrors,
+      });
+      return;
+    }
+
+    const { name, email: rawEmail } = parseResult.data;
+    const db = getDb(req);
+    const userId = req.user.id;
+
+    if (rawEmail) {
+      const email = rawEmail.toLowerCase().trim();
+      const existing = await db
+        .prepare("SELECT id FROM users WHERE lower(email) = ? AND id != ?")
+        .bind(email, userId)
+        .first();
+      if (existing) {
+        res.status(409).json({
+          success: false,
+          message: "An account with this email already exists",
+        });
+        return;
+      }
+    }
+
+    const fields: string[] = [];
+    const values: unknown[] = [];
+
+    if (name) { fields.push("name = ?"); values.push(name); }
+    if (rawEmail) { fields.push("email = ?"); values.push(rawEmail.toLowerCase().trim()); }
+
+    if (fields.length > 0) {
+      values.push(userId);
+      await db
+        .prepare(`UPDATE users SET ${fields.join(", ")} WHERE id = ?`)
+        .bind(...values)
+        .run();
+    }
+
+    logActivity(userId, "update_profile", { name, email: rawEmail });
+
+    const updated = await db
+      .prepare("SELECT * FROM users WHERE id = ?")
+      .bind(userId)
+      .first();
+
+    res.json({
+      success: true,
+      message: "Profile updated successfully",
+      data: {
+        id: (updated as any).id,
+        name: (updated as any).name,
+        email: (updated as any).email,
+        role: (updated as any).role_name,
+        status: (updated as any).status,
+      },
+    });
+  })().catch((err) => {
+    logger.error({ err }, "Update profile error");
+    res.status(500).json({ success: false, message: "Internal server error" });
+  });
+}
+
+export function deleteAccount(req: Request, res: Response): void {
+  (async () => {
+    if (!req.user) {
+      res.status(401).json({ success: false, message: "Not authenticated" });
+      return;
+    }
+
+    const db = getDb(req);
+    const userId = req.user.id;
+
+    await db.prepare("DELETE FROM attendee_sessions WHERE attendee_id IN (SELECT id FROM attendees WHERE user_id = ?)").bind(userId).run();
+    await db.prepare("DELETE FROM conference_attendees WHERE attendee_id IN (SELECT id FROM attendees WHERE user_id = ?)").bind(userId).run();
+    await db.prepare("DELETE FROM attendees WHERE user_id = ?").bind(userId).run();
+    await db.prepare("DELETE FROM speakers WHERE user_id = ?").bind(userId).run();
+    await db.prepare("DELETE FROM session_speakers WHERE speaker_id IN (SELECT id FROM speakers WHERE user_id = ?)").bind(userId).run();
+    await db.prepare("DELETE FROM documents WHERE user_id = ?").bind(userId).run();
+    await db.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
+
+    clearSessionCookie(res);
+    logActivity(userId, "delete_account", { email: req.user.email });
+    res.json({ success: true, message: "Account deleted successfully" });
+  })().catch((err) => {
+    logger.error({ err }, "Delete account error");
+    res.status(500).json({ success: false, message: "Failed to delete account" });
+  });
+}
+
 // ========== MEMBER MANAGEMENT ==========
 
 const MemberListQuerySchema = z.object({
@@ -284,18 +402,19 @@ export function addMember(req: Request, res: Response): void {
       return;
     }
 
-    const { name, email, password, role } = parseResult.data;
+    const { name, email: rawEmail, password, role } = parseResult.data;
+    const email = rawEmail.toLowerCase().trim();
     const db = getDb(req);
 
     const existing = await db
-      .prepare("SELECT id FROM users WHERE email = ?")
+      .prepare("SELECT id FROM users WHERE lower(email) = ?")
       .bind(email)
       .first();
 
     if (existing) {
       res.status(409).json({
         success: false,
-        message: "An account with this email already exists",
+        message: "An account with this email already exists. Please log in instead.",
       });
       return;
     }
@@ -303,24 +422,35 @@ export function addMember(req: Request, res: Response): void {
     const userId = `user-${Date.now()}`;
     const passwordHash = await hashPassword(password);
 
-    await db
-      .prepare(
-        `INSERT INTO users (id, role_id, name, email, password_hash, phone, avatar_url, role_name, status, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .bind(
-        userId,
-        ROLE_IDS[role],
-        name,
-        email,
-        passwordHash,
-        null,
-        null,
-        role,
-        "active",
-        new Date().toISOString(),
-      )
-      .run();
+    try {
+      await db
+        .prepare(
+          `INSERT INTO users (id, role_id, name, email, password_hash, phone, avatar_url, role_name, status, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(
+          userId,
+          ROLE_IDS[role],
+          name,
+          email,
+          passwordHash,
+          null,
+          null,
+          role,
+          "active",
+          new Date().toISOString(),
+        )
+        .run();
+    } catch (err: any) {
+      if (err?.message?.includes("UNIQUE") || err?.cause?.message?.includes("UNIQUE")) {
+        res.status(409).json({
+          success: false,
+          message: "An account with this email already exists. Please log in instead.",
+        });
+        return;
+      }
+      throw err;
+    }
 
     logActivity(req.user?.id, "add_member", { targetId: userId, role, email });
 
