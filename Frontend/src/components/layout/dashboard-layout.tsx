@@ -214,7 +214,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 <Menu className="h-5 w-5 text-[hsl(var(--foreground))]" />
               )}
             </button>
-            <div className="mono-font hidden items-center gap-2 text-[10px] uppercase tracking-[.18em] text-muted-foreground md:flex">
+            <div className="mono-font hidden items-center gap-2 text-[12px] uppercase tracking-[.18em] text-muted-foreground md:flex">
               <img src="/favicon.svg" alt="" className="h-5 w-5 rounded" />
               <span>Convene Management</span>
             </div>
