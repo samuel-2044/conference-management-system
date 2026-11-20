@@ -610,14 +610,37 @@ export const ConferenceRegistration = zod.object({
   "attendeeId": zod.string(),
   "conferenceId": zod.string(),
   "registrationDate": zod.coerce.date(),
-  "status": zod.string()
+  "status": zod.string(),
+  "fullName": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "organization": zod.string().nullish(),
+  "specialRequirements": zod.string().nullish(),
+  "conferenceTitle": zod.string().nullish(),
+  "conferenceStartDate": zod.string().nullish(),
+  "conferenceEndDate": zod.string().nullish(),
+  "conferenceStatus": zod.string().nullish()
 })
 
 export const ListConferenceRegistrationsResponse = zod.array(ConferenceRegistration)
 
 export const RegisterConferenceBody = zod.object({
-  "conferenceId": zod.string()
+  "conferenceId": zod.string(),
+  "fullName": zod.string().min(1),
+  "email": zod.string().email(),
+  "phone": zod.string().min(1),
+  "organization": zod.string().optional(),
+  "specialRequirements": zod.string().optional()
 })
+
+export const MyConferenceRegistration = ConferenceRegistration.extend({
+  "conferenceTitle": zod.string(),
+  "conferenceStartDate": zod.string().nullish(),
+  "conferenceEndDate": zod.string().nullish(),
+  "conferenceStatus": zod.string().nullish()
+})
+
+export const ListMyConferenceRegistrationsResponse = zod.array(MyConferenceRegistration)
 
 export const ConferenceAvailability = zod.object({
   "conferenceId": zod.string(),

@@ -16,6 +16,8 @@ import type {
   ConferenceAvailability,
   RegisterConferenceBody,
   ListConferenceRegistrationsResponse,
+  MyConferenceRegistration,
+  ListMyConferenceRegistrationsResponse,
   SessionRegistration,
   SessionAvailability,
   RegisterSessionBody,
@@ -357,6 +359,82 @@ export function useListConferenceRegistrations<
     conferenceId,
     options,
   );
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+// GET /conferences/registrations/me
+export const getListMyConferenceRegistrationsUrl = () =>
+  `/api/conferences/registrations/me`;
+
+export const listMyConferenceRegistrations = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<ListMyConferenceRegistrationsResponse> => {
+  return customFetch<ListMyConferenceRegistrationsResponse>(
+    getListMyConferenceRegistrationsUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListMyConferenceRegistrationsQueryKey = () =>
+  ["/api/conferences/registrations/me"] as const;
+
+export const getListMyConferenceRegistrationsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMyConferenceRegistrations>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listMyConferenceRegistrations>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey =
+    queryOptions?.queryKey ?? getListMyConferenceRegistrationsQueryKey();
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listMyConferenceRegistrations>>
+  > = ({ signal }) =>
+    listMyConferenceRegistrations({ signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMyConferenceRegistrations>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListMyConferenceRegistrationsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listMyConferenceRegistrations>>
+>;
+export type ListMyConferenceRegistrationsQueryError = ErrorType<unknown>;
+
+export function useListMyConferenceRegistrations<
+  TData = Awaited<ReturnType<typeof listMyConferenceRegistrations>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listMyConferenceRegistrations>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListMyConferenceRegistrationsQueryOptions(options);
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
   };

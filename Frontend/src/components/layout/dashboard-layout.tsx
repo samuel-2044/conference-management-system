@@ -39,13 +39,14 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/reports", label: "Reports", icon: BarChart3, roles: ["admin", "organiser"] },
   // Participant (attendee/speaker)
   { href: "/conferences", label: "Browse conferences", icon: CalendarDays, roles: ["attendee", "speaker"] },
+  { href: "/my-registrations", label: "My registrations", icon: UsersRound, roles: ["attendee", "speaker"] },
   { href: "/schedule", label: "Browse sessions", icon: Clock3, roles: ["attendee", "speaker"] },
   { href: "/profile", label: "Profile", icon: UserRound, roles: ["admin", "organiser", "speaker", "attendee"] },
   { href: "/settings", label: "Settings", icon: Settings2, roles: ["admin", "organiser"] },
 ];
 
 // Primary items for mobile bottom bar (resolved per role below)
-const MOBILE_BOTTOM_HREFS = ["/dashboard", "/conferences", "/schedule", "/profile"];
+const MOBILE_BOTTOM_HREFS = ["/dashboard", "/conferences", "/my-registrations", "/profile"];
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, logout, isAuthenticated } = useAuth();

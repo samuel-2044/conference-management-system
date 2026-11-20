@@ -866,12 +866,13 @@ router.delete("/speakers/:speakerId", authenticate, authorize("organiser", "admi
 
 // ========== ATTENDEES ==========
 
-router.get("/attendees", authenticate, async (req, res) => {
+router.get("/attendees", authenticate, authorize("organiser", "admin"), async (req, res) => {
   const db = getDb(req);
   const query = ListAttendeesQueryParams.parse(req.query);
 
   let sql = `
-    SELECT ca.*, u.name, u.email, c.title as conference_title FROM conference_attendees ca
+    SELECT ca.*, u.name as user_name, u.email as user_email, u.phone as user_phone, c.title as conference_title
+    FROM conference_attendees ca
     INNER JOIN users u ON u.id = ca.attendee_id
     INNER JOIN conferences c ON c.id = ca.conference_id
   `;
@@ -884,21 +885,25 @@ router.get("/attendees", authenticate, async (req, res) => {
   }
 
   if (query.search) {
-    conditions.push("(u.name LIKE ? OR u.email LIKE ?)");
+    conditions.push("(COALESCE(ca.full_name, u.name) LIKE ? OR COALESCE(ca.email, u.email) LIKE ? OR COALESCE(ca.phone, u.phone, '') LIKE ?)");
     const search = `%${query.search.toLowerCase()}%`;
-    values.push(search, search);
+    values.push(search, search, search);
   }
 
   if (conditions.length > 0) {
     sql += ` WHERE ${conditions.join(" AND ")}`;
   }
+  sql += " ORDER BY ca.registration_date DESC";
 
   const result = await db.prepare(sql).bind(...values).all();
   res.json(ListAttendeesResponse.parse(toCamel((result.results as any[]).map((ca: any) => ({
     id: ca.id,
     user_id: ca.attendee_id,
-    name: ca.name ?? "Unknown",
-    email: ca.email ?? "",
+    name: ca.full_name ?? ca.user_name ?? "Unknown",
+    email: ca.email ?? ca.user_email ?? "",
+    phone: ca.phone ?? ca.user_phone ?? null,
+    organization: ca.organization ?? null,
+    special_requirements: ca.special_requirements ?? null,
     conference_id: ca.conference_id,
     conference_title: ca.conference_title ?? "Unknown",
     registration_date: ca.registration_date,
@@ -993,8 +998,22 @@ router.post("/conferences/:conferenceId/register", authenticate, async (req, res
     return;
   }
 
-  // conference_attendees.attendee_id references attendees(id), so make sure an
-  // attendees row exists for this user before inserting the registration.
+  const user = await db
+    .prepare("SELECT id, name, email, phone FROM users WHERE id = ?")
+    .bind(userId)
+    .first<any>();
+
+  const fullName = (body.fullName ?? user?.name ?? "").trim();
+  const email = (body.email ?? user?.email ?? "").trim().toLowerCase();
+  const phone = (body.phone ?? user?.phone ?? "").trim();
+  const organization = (body.organization ?? "").trim();
+  const specialRequirements = (body.specialRequirements ?? "").trim();
+
+  if (!fullName || !email || !phone) {
+    res.status(400).json({ error: "Full name, email, and phone number are required" });
+    return;
+  }
+
   await db
     .prepare(
       "INSERT OR IGNORE INTO attendees (id, user_id, created_at) VALUES (?, ?, ?)",
@@ -1002,18 +1021,32 @@ router.post("/conferences/:conferenceId/register", authenticate, async (req, res
     .bind(userId, userId, new Date().toISOString())
     .run();
 
+  // Keep user contact details in sync for convenience
+  await db
+    .prepare("UPDATE users SET name = ?, email = COALESCE(NULLIF(?, ''), email), phone = ? WHERE id = ?")
+    .bind(fullName, email, phone || null, userId)
+    .run()
+    .catch(() => {});
+
   const registrationId = id("cr");
+  const registrationDate = new Date().toISOString();
   await db
     .prepare(
-      `INSERT INTO conference_attendees (id, attendee_id, conference_id, registration_date, status)
-       VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO conference_attendees
+        (id, attendee_id, conference_id, registration_date, status, full_name, email, phone, organization, special_requirements)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       registrationId,
       userId,
       body.conferenceId,
-      new Date().toISOString(),
+      registrationDate,
       "confirmed",
+      fullName,
+      email,
+      phone,
+      organization || null,
+      specialRequirements || null,
     )
     .run();
 
@@ -1021,9 +1054,53 @@ router.post("/conferences/:conferenceId/register", authenticate, async (req, res
     id: registrationId,
     attendeeId: userId,
     conferenceId: body.conferenceId,
-    registrationDate: new Date().toISOString(),
+    registrationDate,
     status: "confirmed",
+    fullName,
+    email,
+    phone,
+    organization: organization || null,
+    specialRequirements: specialRequirements || null,
   });
+});
+
+router.get("/conferences/registrations/me", authenticate, async (req, res) => {
+  const db = getDb(req);
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const rows = await db
+    .prepare(`
+      SELECT ca.*, c.title as conference_title, c.start_date, c.end_date, c.status as conference_status,
+             u.name as user_name, u.email as user_email, u.phone as user_phone
+      FROM conference_attendees ca
+      INNER JOIN conferences c ON c.id = ca.conference_id
+      INNER JOIN users u ON u.id = ca.attendee_id
+      WHERE ca.attendee_id = ?
+      ORDER BY ca.registration_date DESC
+    `)
+    .bind(userId)
+    .all();
+
+  res.json((rows.results as any[]).map((cr: any) => ({
+    id: cr.id,
+    attendeeId: cr.attendee_id,
+    conferenceId: cr.conference_id,
+    conferenceTitle: cr.conference_title ?? "Unknown",
+    conferenceStartDate: cr.start_date ?? null,
+    conferenceEndDate: cr.end_date ?? null,
+    conferenceStatus: cr.conference_status ?? null,
+    registrationDate: cr.registration_date,
+    status: cr.status,
+    fullName: cr.full_name ?? cr.user_name ?? "",
+    email: cr.email ?? cr.user_email ?? "",
+    phone: cr.phone ?? cr.user_phone ?? "",
+    organization: cr.organization ?? null,
+    specialRequirements: cr.special_requirements ?? null,
+  })));
 });
 
 router.get("/conferences/:conferenceId/registrations", authenticate, authorize("organiser", "admin"), async (req, res) => {
@@ -1032,9 +1109,11 @@ router.get("/conferences/:conferenceId/registrations", authenticate, authorize("
 
   const registrations = await db
     .prepare(`
-      SELECT ca.*, u.name, u.email FROM conference_attendees ca
+      SELECT ca.*, u.name as user_name, u.email as user_email, u.phone as user_phone
+      FROM conference_attendees ca
       INNER JOIN users u ON u.id = ca.attendee_id
-      WHERE ca.conference_id = ? AND ca.status != 'cancelled'
+      WHERE ca.conference_id = ?
+      ORDER BY ca.registration_date DESC
     `)
     .bind(conferenceId)
     .all();
@@ -1042,14 +1121,16 @@ router.get("/conferences/:conferenceId/registrations", authenticate, authorize("
   res.json(ListConferenceRegistrationsResponse.parse((registrations.results as any[]).map((cr: any) => ({
     id: cr.id,
     attendeeId: cr.attendee_id,
-    name: cr.name ?? "Unknown",
-    email: cr.email ?? "",
     conferenceId: cr.conference_id,
     registrationDate: cr.registration_date,
     status: cr.status,
-  }))));
+    fullName: cr.full_name ?? cr.user_name ?? "Unknown",
+    email: cr.email ?? cr.user_email ?? "",
+    phone: cr.phone ?? cr.user_phone ?? null,
+    organization: cr.organization ?? null,
+    specialRequirements: cr.special_requirements ?? null,
+  })))));
 });
-
 router.delete("/conferences/:conferenceId/cancel", authenticate, async (req, res) => {
   const db = getDb(req);
   const userId = req.user?.id;

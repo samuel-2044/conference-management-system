@@ -34,8 +34,12 @@ All members share the development password `Convene@2026` and an `@convene.com` 
 | sk-6 | Stephen Njoroge | stephen@convene.com | Speaker |
 | sk-7 | Wilfred Maina | wilfred@convene.com | Attendee |
 | sk-8 | Elvis Adachi | elvis@convene.com | Attendee |
+| sk-9 | Sarah Wanjiku | sarah@convene.com | Organiser |
+| sk-10 | Brian Otieno | brian@convene.com | Speaker |
+| sk-11 | Grace Achieng | grace@convene.com | Attendee |
+| sk-12 | Kevin Mutua | kevin@convene.com | Attendee |
 
-One admin, one organiser, two speakers and four attendees. Additional speakers and
+Seeded: 1 admin, 2 organisers, 3 speakers and 6 attendees. Additional speakers and
 attendees can be added later from the dashboard or through the signup page.
 
 Passwords are stored as PBKDF2-SHA256 hashes. The session cookie is

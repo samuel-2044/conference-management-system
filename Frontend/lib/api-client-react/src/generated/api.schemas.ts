@@ -442,6 +442,22 @@ export interface ConferenceRegistration {
   conferenceId: string;
   registrationDate: string;
   status: string;
+  fullName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  organization?: string | null;
+  specialRequirements?: string | null;
+  conferenceTitle?: string | null;
+  conferenceStartDate?: string | null;
+  conferenceEndDate?: string | null;
+  conferenceStatus?: string | null;
+}
+
+export interface MyConferenceRegistration extends ConferenceRegistration {
+  conferenceTitle: string;
+  conferenceStartDate?: string | null;
+  conferenceEndDate?: string | null;
+  conferenceStatus?: string | null;
 }
 
 export interface ConferenceAvailability {
@@ -459,9 +475,15 @@ export interface ConferenceAvailability {
 
 export interface RegisterConferenceBody {
   conferenceId: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  organization?: string;
+  specialRequirements?: string;
 }
 
 export type ListConferenceRegistrationsResponse = ConferenceRegistration[];
+export type ListMyConferenceRegistrationsResponse = MyConferenceRegistration[];
 
 // ========== SESSION REGISTRATION ==========
 

@@ -1,19 +1,48 @@
 import { useMemo, useState } from "react";
-import { CalendarDays, Clock3, UsersRound, AlertCircle, CheckCircle } from "lucide-react";
+import { CalendarDays, UsersRound, AlertCircle, CheckCircle, ClipboardList } from "lucide-react";
 import {
   useListAvailableConferences,
   useRegisterConference,
   useCancelConferenceRegistration,
+  useListMyConferenceRegistrations,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/toaster";
 import { toast } from "sonner";
+import { useAuth } from "@/context/auth-context";
+
+type FormState = {
+  fullName: string;
+  email: string;
+  phone: string;
+  organization: string;
+  specialRequirements: string;
+};
+
+const emptyForm = (user?: { name?: string; email?: string } | null): FormState => ({
+  fullName: user?.name ?? "",
+  email: user?.email ?? "",
+  phone: "",
+  organization: "",
+  specialRequirements: "",
+});
 
 export function ConferenceBrowsePage() {
-  const [registeredIds, setRegisteredIds] = useState<Set<string>>(new Set());
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const { user } = useAuth();
   const query = useListAvailableConferences();
+  const myRegsQuery = useListMyConferenceRegistrations();
   const conferences = query.data ?? [];
+  const myRegs = myRegsQuery.data ?? [];
+
+  const registeredIds = useMemo(
+    () => new Set(myRegs.filter((r: any) => r.status !== "cancelled").map((r: any) => r.conferenceId)),
+    [myRegs],
+  );
+
+  const [openFormId, setOpenFormId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [form, setForm] = useState<FormState>(emptyForm(user));
+
   const registerMutation = useRegisterConference();
   const cancelMutation = useCancelConferenceRegistration();
 
@@ -22,19 +51,40 @@ export function ConferenceBrowsePage() {
     [conferences, registeredIds],
   );
 
+  const openForm = (conferenceId: string) => {
+    setForm((prev) => ({
+      ...emptyForm(user),
+      phone: prev.phone, // keep if user typed before
+    }));
+    setOpenFormId(conferenceId);
+  };
+
   const handleRegister = (conferenceId: string) => {
+    if (!form.fullName.trim() || !form.email.trim() || !form.phone.trim()) {
+      toast.error("Full name, email, and phone number are required");
+      return;
+    }
     setBusyId(conferenceId);
     registerMutation.mutate(
-      { conferenceId, data: { conferenceId } },
+      {
+        conferenceId,
+        data: {
+          conferenceId,
+          fullName: form.fullName.trim(),
+          email: form.email.trim(),
+          phone: form.phone.trim(),
+          organization: form.organization.trim() || undefined,
+          specialRequirements: form.specialRequirements.trim() || undefined,
+        } as any,
+      },
       {
         onSuccess: () => {
-          setRegisteredIds((prev) => new Set(prev).add(conferenceId));
           toast.success("Registered for conference");
+          setOpenFormId(null);
           query.refetch();
+          myRegsQuery.refetch();
         },
-        onError: (err: any) => {
-          toast.error(err?.message || "Registration failed");
-        },
+        onError: (err: any) => toast.error(err?.message || "Registration failed"),
         onSettled: () => setBusyId(null),
       },
     );
@@ -46,17 +96,11 @@ export function ConferenceBrowsePage() {
       { conferenceId },
       {
         onSuccess: () => {
-          setRegisteredIds((prev) => {
-            const next = new Set(prev);
-            next.delete(conferenceId);
-            return next;
-          });
-          toast.success("Registration cancelled");
+          toast.success("Registration withdrawn");
           query.refetch();
+          myRegsQuery.refetch();
         },
-        onError: (err: any) => {
-          toast.error(err?.message || "Cancellation failed");
-        },
+        onError: (err: any) => toast.error(err?.message || "Withdrawal failed"),
         onSettled: () => setBusyId(null),
       },
     );
@@ -68,37 +112,34 @@ export function ConferenceBrowsePage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Browse conferences</h1>
         <p className="text-sm text-muted-foreground">
-          View open conferences and register or cancel your registration.
+          Register for open conferences by providing your details. You can withdraw from My registrations.
         </p>
       </div>
 
-      {query.isLoading && (
+      {(query.isLoading || myRegsQuery.isLoading) && (
         <div className="h-64 flex items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
       )}
 
-      {!query.isLoading && (
+      {!query.isLoading && !myRegsQuery.isLoading && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {visibleConferences.length === 0 ? (
             <div className="col-span-3 rounded-xl border border-dashed border-border bg-card p-12 text-center">
-              <Clock3 className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+              <ClipboardList className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
               <h3 className="font-semibold">No conferences open for registration</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Check back later for upcoming conferences.
-              </p>
+              <p className="mt-1 text-sm text-muted-foreground">Check back later for upcoming conferences.</p>
             </div>
           ) : (
             visibleConferences.map((conference) => {
               const isRegistered = registeredIds.has(conference.conferenceId);
               const closed = conference.isFull || !conference.registrationOpen;
+              const formOpen = openFormId === conference.conferenceId;
               return (
                 <div
                   key={conference.conferenceId}
                   className={`rounded-xl border p-5 transition ${
-                    closed && !isRegistered
-                      ? "border-border bg-secondary/30 opacity-80"
-                      : "border-border bg-card hover:border-primary hover:shadow-md"
+                    closed && !isRegistered ? "border-border bg-secondary/30 opacity-90" : "border-border bg-card hover:border-primary hover:shadow-md"
                   }`}
                 >
                   <div className="mb-4 flex items-center gap-2 text-xs font-semibold capitalize">
@@ -122,30 +163,54 @@ export function ConferenceBrowsePage() {
                       {conference.registeredCount}
                       {conference.capacity != null ? ` / ${conference.capacity}` : ""} registered
                     </p>
-                    {conference.capacity != null && (
-                      <p>{conference.availableCount} spots available</p>
-                    )}
+                    {conference.capacity != null && <p>{conference.availableCount} spots available</p>}
                   </div>
-                  <div className="mt-5">
+
+                  <div className="mt-5 space-y-3">
                     {isRegistered ? (
-                      <Button
-                        variant="destructive"
-                        className="w-full"
-                        disabled={busyId === conference.conferenceId}
-                        onClick={() => handleCancel(conference.conferenceId)}
-                      >
-                        Cancel registration
+                      <Button variant="destructive" className="w-full" disabled={busyId === conference.conferenceId} onClick={() => handleCancel(conference.conferenceId)}>
+                        Withdraw registration
                       </Button>
                     ) : closed ? (
                       <Button variant="outline" disabled className="w-full">
                         {conference.isFull ? "Full" : "Closed"}
                       </Button>
+                    ) : formOpen ? (
+                      <div className="space-y-3 rounded-lg border border-border bg-secondary/20 p-3">
+                        <div className="text-sm font-semibold">Registration details</div>
+                        <div className="grid gap-2">
+                          <label className="grid gap-1 text-xs font-medium">
+                            Full name *
+                            <input className="h-9 rounded-md border border-input bg-background px-2 text-sm" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
+                          </label>
+                          <label className="grid gap-1 text-xs font-medium">
+                            Email * <span className="font-normal text-muted-foreground">(from your account)</span>
+                            <input type="email" className="h-9 rounded-md border border-input bg-background px-2 text-sm" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                          </label>
+                          <label className="grid gap-1 text-xs font-medium">
+                            Phone number *
+                            <input className="h-9 rounded-md border border-input bg-background px-2 text-sm" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="e.g. +254..." />
+                          </label>
+                          <label className="grid gap-1 text-xs font-medium">
+                            Organization
+                            <input className="h-9 rounded-md border border-input bg-background px-2 text-sm" value={form.organization} onChange={(e) => setForm({ ...form, organization: e.target.value })} />
+                          </label>
+                          <label className="grid gap-1 text-xs font-medium">
+                            Special requirements
+                            <textarea className="min-h-16 rounded-md border border-input bg-background px-2 py-1.5 text-sm" value={form.specialRequirements} onChange={(e) => setForm({ ...form, specialRequirements: e.target.value })} />
+                          </label>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button className="flex-1" disabled={busyId === conference.conferenceId} onClick={() => handleRegister(conference.conferenceId)}>
+                            Submit registration
+                          </Button>
+                          <Button variant="outline" onClick={() => setOpenFormId(null)} disabled={busyId === conference.conferenceId}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
                     ) : (
-                      <Button
-                        className="w-full"
-                        disabled={busyId === conference.conferenceId}
-                        onClick={() => handleRegister(conference.conferenceId)}
-                      >
+                      <Button className="w-full" onClick={() => openForm(conference.conferenceId)}>
                         Register
                       </Button>
                     )}

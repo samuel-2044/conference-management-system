@@ -1,6 +1,6 @@
 import { useAuth } from "@/context/auth-context";
-import { useListAvailableConferences, useListAvailableSessions } from "@workspace/api-client-react";
-import { CalendarDays, Clock3, ArrowRight } from "lucide-react";
+import { useListAvailableConferences, useListAvailableSessions, useListMyConferenceRegistrations } from "@workspace/api-client-react";
+import { CalendarDays, Clock3, ArrowRight, ClipboardCheck } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
@@ -8,11 +8,14 @@ export function AttendeeDashboard() {
   const { user } = useAuth();
   const { data: conferences } = useListAvailableConferences();
   const { data: sessions } = useListAvailableSessions();
+  const { data: myRegs } = useListMyConferenceRegistrations();
 
   const openConferences = (conferences ?? []).filter((c) => c.registrationOpen && !c.isFull);
   const openSessions = (sessions ?? []).filter((s) => s.registrationOpen && !s.isFull);
+  const myActiveRegs = (myRegs ?? []).filter((r: any) => r.status !== "cancelled");
 
   const stats = [
+    { label: "My registrations", value: myActiveRegs.length, icon: ClipboardCheck },
     { label: "Open conferences", value: openConferences.length, icon: CalendarDays },
     { label: "Open sessions", value: openSessions.length, icon: Clock3 },
   ];
@@ -22,7 +25,7 @@ export function AttendeeDashboard() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Welcome, {user?.name}</h1>
         <p className="text-sm text-muted-foreground">
-          Browse conferences and register for sessions available to you.
+          Register for conferences with your details, track your registrations, and browse sessions.
         </p>
       </div>
 
@@ -39,6 +42,32 @@ export function AttendeeDashboard() {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
+        <div className="rounded-xl border border-border bg-card p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold">My registrations</h2>
+            <Link href="/my-registrations" className="text-xs font-semibold text-[hsl(var(--primary))] hover:underline flex items-center gap-1">
+              View all <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          {myActiveRegs.length > 0 ? (
+            <div className="space-y-3">
+              {myActiveRegs.slice(0, 4).map((r: any) => (
+                <div key={r.id} className="flex items-center justify-between rounded-lg border border-border p-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-sm truncate">{r.conferenceTitle}</div>
+                    <div className="text-xs text-muted-foreground truncate capitalize">{r.status} · {r.phone || r.email}</div>
+                  </div>
+                  <Link href="/my-registrations">
+                    <Button variant="outline" className="h-8 text-xs">Manage</Button>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">You have no active conference registrations.</p>
+          )}
+        </div>
+
         <div className="rounded-xl border border-border bg-card p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold">Conferences</h2>

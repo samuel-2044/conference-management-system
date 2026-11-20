@@ -33,6 +33,7 @@ import { SpeakerDashboard } from "@/pages/speaker/dashboard";
 import { AttendeeDashboard } from "@/pages/attendee/dashboard";
 import { ConferenceBrowsePage } from "@/pages/attendee/conference-browse";
 import { SessionBrowsePage } from "@/pages/attendee/session-browse";
+import { MyRegistrationsPage } from "@/pages/attendee/my-registrations";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -892,9 +893,18 @@ function Attendees() {
 
   const exportCsv = () => {
     const csv = [
-      "Name,Email,Registered",
-      ...attendees.map((a) =>
-        [a.name || "", a.email || "", a.registrationDate].map((v) => `"${v}"`).join(","),
+      "Name,Email,Phone,Organization,Conference,Status,Registered,Special requirements",
+      ...attendees.map((a: any) =>
+        [
+          a.name || "",
+          a.email || "",
+          a.phone || "",
+          a.organization || "",
+          a.conferenceTitle || "",
+          a.status || "",
+          a.registrationDate || "",
+          a.specialRequirements || "",
+        ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","),
       ),
     ].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -911,7 +921,7 @@ function Attendees() {
       <PageHeader
         eyebrow="People"
         title="Attendees"
-        body="A thoughtful attendee experience starts with a complete picture."
+        body="View attendee registrations with conference and submitted registration details."
         action={
           <Button variant="outline" onClick={exportCsv} testId="button-export-attendees">
             <Download className="h-4 w-4" /> Export CSV
@@ -924,7 +934,7 @@ function Attendees() {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search attendees"
+            placeholder="Search by name, email, or phone"
             data-testid="input-search-attendees"
             className="h-10 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-sm outline-none focus:border-primary"
           />
@@ -936,26 +946,42 @@ function Attendees() {
         onRetry={() => query.refetch()}
         empty={!query.isLoading && attendees.length === 0}
         emptyTitle="No attendees found"
-        emptyBody="Try a broader search or invite your first attendee."
+        emptyBody="Registrations will appear here with the details attendees provided."
       >
-        <div className="overflow-hidden rounded-xl border border-border bg-card">
-          {attendees.map((attendee) => (
-            <button
+        <div className="grid gap-3">
+          {attendees.map((attendee: any) => (
+            <div
               key={attendee.id}
-              className="grid w-full gap-2 border-b border-border px-5 py-4 text-left last:border-0 hover:bg-secondary/50 md:grid-cols-[1.5fr_1.5fr_1fr] md:items-center md:gap-4"
+              className="rounded-xl border border-border bg-card p-4 md:p-5"
               data-testid={`row-attendee-${attendee.id}`}
             >
-              <div className="flex items-center gap-3">
-                <Avatar name={attendee.name} />
-                <span className="font-semibold">{attendee.name}</span>
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div className="flex items-start gap-3">
+                  <Avatar name={attendee.name} />
+                  <div>
+                    <div className="font-semibold">{attendee.name}</div>
+                    <div className="text-sm text-muted-foreground">{attendee.email}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      Conference: <span className="font-medium text-foreground">{attendee.conferenceTitle}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <StatusBadge status={attendee.status} />
+                  <span className="text-muted-foreground">Registered {dateLabel(attendee.registrationDate as unknown as string)}</span>
+                </div>
               </div>
-              <span className="text-sm text-muted-foreground">
-                {attendee.email}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                {dateLabel(attendee.registrationDate as unknown as string)}
-              </span>
-            </button>
+              <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2 lg:grid-cols-3">
+                <div><span className="font-medium text-foreground">Phone:</span> {attendee.phone || "—"}</div>
+                <div><span className="font-medium text-foreground">Organization:</span> {attendee.organization || "—"}</div>
+              </div>
+              {attendee.specialRequirements ? (
+                <div className="mt-2 rounded-lg bg-secondary/40 p-3 text-sm">
+                  <span className="font-medium">Special requirements:</span>
+                  <div className="mt-0.5 whitespace-pre-wrap text-muted-foreground">{attendee.specialRequirements}</div>
+                </div>
+              ) : null}
+            </div>
           ))}
         </div>
       </QueryState>
@@ -2073,6 +2099,9 @@ function Router() {
           </Route>
           <Route path="/attendee/sessions">
             <AuthRoute>{() => <DashboardLayout><SessionBrowsePage /></DashboardLayout>}</AuthRoute>
+          </Route>
+          <Route path="/my-registrations">
+            <AuthRoute>{() => <DashboardLayout><MyRegistrationsPage /></DashboardLayout>}</AuthRoute>
           </Route>
 
           <Route path="/speakers">
