@@ -1129,7 +1129,7 @@ router.get("/conferences/:conferenceId/registrations", authenticate, authorize("
     phone: cr.phone ?? cr.user_phone ?? null,
     organization: cr.organization ?? null,
     specialRequirements: cr.special_requirements ?? null,
-  })))));
+  }))));
 });
 router.delete("/conferences/:conferenceId/cancel", authenticate, async (req, res) => {
   const db = getDb(req);
