@@ -107,7 +107,7 @@ export function MyRegistrationsPage() {
                       disabled={busyId === reg.conferenceId || cancelMutation.isPending}
                       onClick={() => handleCancel(reg.conferenceId)}
                     >
-                      Withdraw
+                      {busyId === reg.conferenceId ? "Withdrawing…" : "Withdraw"}
                     </Button>
                   ) : (
                     <span className="text-sm text-muted-foreground">Withdrawn</span>

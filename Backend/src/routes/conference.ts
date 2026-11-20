@@ -357,12 +357,23 @@ router.post("/conferences", authenticate, authorize("organiser", "admin"), async
 
 router.get("/conferences/available", authenticate, asyncHandler(async (_req, res) => {
   const db = getDb(_req);
-  const now = new Date();
 
-  const conferences = await db.prepare("SELECT * FROM conferences").all();
+  const [conferences, counts] = await Promise.all([
+    db.prepare("SELECT * FROM conferences").all(),
+    db
+      .prepare(
+        "SELECT conference_id, COUNT(*) as count FROM conference_attendees WHERE status != 'cancelled' GROUP BY conference_id",
+      )
+      .all(),
+  ]);
 
-  const result = await Promise.all((conferences.results as any[]).map(async (conference) => {
-    const registeredCount = await getConferenceRegistrationCount(db, conference.id);
+  const countMap = new Map<string, number>();
+  for (const row of (counts.results as any[])) {
+    countMap.set(row.conference_id, Number(row.count) || 0);
+  }
+
+  const result = (conferences.results as any[]).map((conference) => {
+    const registeredCount = countMap.get(conference.id) ?? 0;
     const capacity = conference.capacity ?? null;
     const isFull = capacity !== null && registeredCount >= capacity;
     const status = computeConferenceStatus(conference);
@@ -377,7 +388,7 @@ router.get("/conferences/available", authenticate, asyncHandler(async (_req, res
       isFull,
       registrationOpen,
     });
-  }));
+  });
 
   res.json(ListAvailableConferencesResponse.parse(result));
 }));
@@ -1159,26 +1170,35 @@ router.delete("/conferences/:conferenceId/cancel", authenticate, async (req, res
 
 router.get("/sessions/available", authenticate, asyncHandler(async (_req, res) => {
   const db = getDb(_req);
-  const now = new Date();
 
-  const sessions = await db.prepare("SELECT * FROM sessions").all();
+  const [sessions, conferences, venues, counts] = await Promise.all([
+    db.prepare("SELECT * FROM sessions").all(),
+    db.prepare("SELECT id, title, start_date, end_date, status FROM conferences").all(),
+    db.prepare("SELECT id, name FROM venues").all(),
+    db
+      .prepare(
+        "SELECT session_id, COUNT(*) as count FROM attendee_sessions WHERE status != 'cancelled' GROUP BY session_id",
+      )
+      .all(),
+  ]);
 
-  const result = await Promise.all((sessions.results as any[]).map(async (session) => {
-    const conference = await db
-      .prepare("SELECT * FROM conferences WHERE id = ?")
-      .bind(session.conference_id)
-      .first();
+  const confMap = new Map<string, any>();
+  for (const c of (conferences.results as any[])) confMap.set(c.id, c);
+  const venueMap = new Map<string, any>();
+  for (const v of (venues.results as any[])) venueMap.set(v.id, v);
+  const countMap = new Map<string, number>();
+  for (const row of (counts.results as any[])) countMap.set(row.session_id, Number(row.count) || 0);
 
-    const venue = session.venue_id
-      ? await db.prepare("SELECT * FROM venues WHERE id = ?").bind(session.venue_id).first()
-      : null;
-
-    const registeredCount = await getSessionRegistrationCount(db, session.id);
+  const result = (sessions.results as any[]).map((session) => {
+    const conference = confMap.get(session.conference_id);
+    const venue = session.venue_id ? venueMap.get(session.venue_id) : null;
+    const registeredCount = countMap.get(session.id) ?? 0;
     const capacity = session.capacity ?? null;
     const isFull = capacity !== null && registeredCount >= capacity;
     const sessionStatus = computeSessionStatus(session);
     const conferenceStatus = conference ? computeConferenceStatus(conference) : "draft";
-    const registrationOpen = sessionStatus === "upcoming" && (conferenceStatus === "upcoming" || conferenceStatus === "ongoing");
+    const registrationOpen =
+      sessionStatus === "upcoming" && (conferenceStatus === "upcoming" || conferenceStatus === "ongoing");
 
     return SessionAvailability.parse({
       sessionId: session.id,
@@ -1195,7 +1215,7 @@ router.get("/sessions/available", authenticate, asyncHandler(async (_req, res) =
       isFull,
       registrationOpen,
     });
-  }));
+  });
 
   res.json(ListAvailableSessionsResponse.parse(result));
 }));

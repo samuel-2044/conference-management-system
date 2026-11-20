@@ -169,7 +169,7 @@ export function ConferenceBrowsePage() {
                   <div className="mt-5 space-y-3">
                     {isRegistered ? (
                       <Button variant="destructive" className="w-full" disabled={busyId === conference.conferenceId} onClick={() => handleCancel(conference.conferenceId)}>
-                        Withdraw registration
+                        {busyId === conference.conferenceId ? "Withdrawing…" : "Withdraw registration"}
                       </Button>
                     ) : closed ? (
                       <Button variant="outline" disabled className="w-full">
@@ -202,7 +202,7 @@ export function ConferenceBrowsePage() {
                         </div>
                         <div className="flex gap-2">
                           <Button className="flex-1" disabled={busyId === conference.conferenceId} onClick={() => handleRegister(conference.conferenceId)}>
-                            Submit registration
+                            {busyId === conference.conferenceId ? "Submitting…" : "Submit registration"}
                           </Button>
                           <Button variant="outline" onClick={() => setOpenFormId(null)} disabled={busyId === conference.conferenceId}>
                             Cancel

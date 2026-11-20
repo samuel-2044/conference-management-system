@@ -21,6 +21,7 @@ import type { Attendee, Conference, ConferenceDetail, ConferenceInput, Document 
 import { ErrorBoundary } from "@/components/error-boundary";
 import NotFound from "@/pages/not-found";
 import { Toaster } from "@/components/ui/toaster";
+import { toast } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
@@ -571,16 +572,23 @@ function ConferenceDetailPage() {
               <Button
                 variant="ghost"
                 className="text-[hsl(var(--sidebar-foreground)/.65)]"
+                disabled={deleteMutation.isPending}
                 onClick={() => {
-                  if (window.confirm("Delete this conference?"))
-                    deleteMutation.mutate(
-                      { conferenceId: id },
-                      { onSuccess: () => setLocation("/conferences") },
-                    );
+                  if (!window.confirm("Delete this conference?")) return;
+                  deleteMutation.mutate(
+                    { conferenceId: id },
+                    {
+                      onSuccess: () => {
+                        toast.success("Conference deleted");
+                        setLocation("/conferences");
+                      },
+                      onError: (err: any) => toast.error(err?.message || "Failed to delete conference"),
+                    },
+                  );
                 }}
                 testId="button-delete-conference"
               >
-                <Trash2 className="h-4 w-4" />
+                {deleteMutation.isPending ? "…" : <Trash2 className="h-4 w-4" />}
               </Button>
             </div>
           </div>
@@ -712,7 +720,10 @@ function EditConferenceModal({
               conferenceId: conference.id,
               data: { title, description },
             },
-            { onSuccess: onSaved },
+            {
+              onSuccess: () => { toast.success("Conference updated"); onSaved(); },
+              onError: (err: any) => toast.error(err?.message || "Failed to update conference"),
+            },
           );
         }}
       >
@@ -794,17 +805,24 @@ function Speakers() {
                   size="lg"
                 />
                 <button
+                  disabled={deleteMutation.isPending}
                   onClick={() => {
-                    if (window.confirm(`Remove ${speaker.name || "speaker"}?`))
-                      deleteMutation.mutate(
-                        { speakerId: speaker.id },
-                        { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListSpeakersQueryKey() }) },
-                      );
+                    if (!window.confirm(`Remove ${speaker.name || "speaker"}?`)) return;
+                    deleteMutation.mutate(
+                      { speakerId: speaker.id },
+                      {
+                        onSuccess: () => {
+                          toast.success("Speaker removed");
+                          queryClient.invalidateQueries({ queryKey: getListSpeakersQueryKey() });
+                        },
+                        onError: (err: any) => toast.error(err?.message || "Failed to remove speaker"),
+                      },
+                    );
                   }}
-                  className="rounded-md p-2 text-muted-foreground opacity-0 hover:bg-secondary group-hover:opacity-100"
+                  className="rounded-md p-2 text-muted-foreground opacity-0 hover:bg-secondary group-hover:opacity-100 disabled:opacity-50"
                   data-testid={`button-delete-speaker-${speaker.id}`}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  {deleteMutation.isPending ? "…" : <Trash2 className="h-4 w-4" />}
                 </button>
               </div>
               <h2 className="mt-5 font-bold">{speaker.name}</h2>
@@ -855,7 +873,13 @@ function SpeakerModal({
         className="grid gap-4"
         onSubmit={(event) => {
           event.preventDefault();
-          mutation.mutate({ data: form as unknown as SpeakerInput }, { onSuccess: () => { onCreated(); onClose(); } });
+          mutation.mutate(
+            { data: form as unknown as SpeakerInput },
+            {
+              onSuccess: () => { toast.success("Speaker added"); onCreated(); onClose(); },
+              onError: (err: any) => toast.error(err?.message || "Failed to add speaker"),
+            },
+          );
         }}
       >
         <Field
