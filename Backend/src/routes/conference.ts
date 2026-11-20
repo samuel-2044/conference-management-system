@@ -1142,7 +1142,7 @@ router.delete("/conferences/:conferenceId/cancel", authenticate, async (req, res
 
   const result = await db
     .prepare(
-      "UPDATE conference_attendees SET status = 'cancelled' WHERE attendee_id = ? AND conference_id = ? AND status != 'cancelled'",
+      "DELETE FROM conference_attendees WHERE attendee_id = ? AND conference_id = ?",
     )
     .bind(userId, req.params.conferenceId)
     .run();
