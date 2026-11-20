@@ -23,6 +23,7 @@ import NotFound from "@/pages/not-found";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/context/auth-context";
+import { cn } from "@/lib/utils";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { LoginPage } from "@/pages/auth/login";
 import { SignupPage } from "@/pages/auth/signup";
@@ -553,7 +554,7 @@ function ConferenceDetailPage() {
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                className="border-[hsl(var(--sidebar-foreground)/.2)] bg-transparent text-[hsl(var(--sidebar-foreground))] hover:bg-[hsl(var(--sidebar-foreground)/.1)]"
+                className="border-white/20 bg-white text-gray-900 hover:bg-white/90"
                 onClick={() => setEditing(true)}
                 testId="button-edit-conference"
               >
@@ -1707,17 +1708,32 @@ function Profile() {
 function Settings() {
   const { user } = useAuth();
   const [saved, setSaved] = useState(false);
+  const [workspaceName, setWorkspaceName] = useState("Convene");
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [registrationAlerts, setRegistrationAlerts] = useState(true);
+  const [sessionReminders, setSessionReminders] = useState(false);
+  const [requireStrongPasswords, setRequireStrongPasswords] = useState(true);
+  const [twoFactorAuth, setTwoFactorAuth] = useState(false);
+  const [sessionTimeout, setSessionTimeout] = useState("24");
+  const [defaultRole, setDefaultRole] = useState("attendee");
+  const [allowSelfSignup, setAllowSelfSignup] = useState(true);
+  const [maxCapacity, setMaxCapacity] = useState("500");
 
-  if (user?.role !== "admin") {
+  if (user?.role !== "admin" && user?.role !== "organiser") {
     return (
       <PageFrame>
         <PageHeader eyebrow="Settings" title="Settings" />
         <div className="rounded-xl border border-dashed border-border bg-card px-6 py-14 text-center">
-          <h3 className="font-semibold">Settings are only available to administrators.</h3>
+          <h3 className="font-semibold">Settings are only available to administrators and organisers.</h3>
         </div>
       </PageFrame>
     );
   }
+
+  const handleSave = () => {
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
 
   return (
     <PageFrame>
@@ -1727,6 +1743,7 @@ function Settings() {
         body="Set the defaults that keep your team moving in the same direction."
       />
       <div className="grid gap-5">
+        {/* Workspace defaults */}
         <div className="rounded-xl border border-border bg-card p-6 md:p-8">
           <h2 className="text-lg font-bold">Workspace defaults</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -1735,23 +1752,198 @@ function Settings() {
           <div className="mt-7 grid gap-5">
             <Field
               label="Workspace name"
-              value="Convene"
-              onChange={() => {}}
+              value={workspaceName}
+              onChange={setWorkspaceName}
               required
               testId="input-workspace-name"
+            />
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field
+                label="Default role for new members"
+                value={defaultRole}
+                onChange={setDefaultRole}
+                testId="input-default-role"
+              />
+              <Field
+                label="Default conference capacity"
+                value={maxCapacity}
+                onChange={setMaxCapacity}
+                type="number"
+                testId="input-default-capacity"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-3 mt-6">
+            {saved && (
+              <span className="text-xs font-semibold text-emerald-700">Changes saved</span>
+            )}
+            <Button type="submit" testId="button-save-settings" onClick={handleSave}>
+              Save settings
+            </Button>
+          </div>
+        </div>
+
+        {/* Registration & access */}
+        <div className="rounded-xl border border-border bg-card p-6 md:p-8">
+          <h2 className="text-lg font-bold">Registration & access</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Control how people join and access your workspace.
+          </p>
+          <div className="mt-7 space-y-4">
+            <ToggleRow
+              label="Allow self-signup"
+              description="Let anyone create an attendee or speaker account"
+              checked={allowSelfSignup}
+              onChange={setAllowSelfSignup}
+              testId="toggle-allow-signup"
+            />
+            <div className="h-px bg-border" />
+            <ToggleRow
+              label="Email notifications"
+              description="Send email notifications for new registrations and updates"
+              checked={emailNotifications}
+              onChange={setEmailNotifications}
+              testId="toggle-email-notifications"
+            />
+            <div className="h-px bg-border" />
+            <ToggleRow
+              label="Registration alerts"
+              description="Notify admins when someone registers for a conference"
+              checked={registrationAlerts}
+              onChange={setRegistrationAlerts}
+              testId="toggle-registration-alerts"
+            />
+            <div className="h-px bg-border" />
+            <ToggleRow
+              label="Session reminders"
+              description="Send reminders before upcoming sessions"
+              checked={sessionReminders}
+              onChange={setSessionReminders}
+              testId="toggle-session-reminders"
             />
           </div>
           <div className="flex items-center justify-end gap-3 mt-6">
             {saved && (
               <span className="text-xs font-semibold text-emerald-700">Changes saved</span>
             )}
-            <Button type="submit" testId="button-save-settings">
+            <Button type="submit" testId="button-save-registration" onClick={handleSave}>
               Save settings
+            </Button>
+          </div>
+        </div>
+
+        {/* Security */}
+        <div className="rounded-xl border border-border bg-card p-6 md:p-8">
+          <h2 className="text-lg font-bold">Security</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Keep your workspace and member data safe.
+          </p>
+          <div className="mt-7 space-y-4">
+            <ToggleRow
+              label="Require strong passwords"
+              description="Enforce minimum 8 characters with mixed case and numbers"
+              checked={requireStrongPasswords}
+              onChange={setRequireStrongPasswords}
+              testId="toggle-strong-passwords"
+            />
+            <div className="h-px bg-border" />
+            <ToggleRow
+              label="Two-factor authentication"
+              description="Require 2FA for admin and organiser accounts"
+              checked={twoFactorAuth}
+              onChange={setTwoFactorAuth}
+              testId="toggle-two-factor"
+            />
+            <div className="h-px bg-border" />
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold">Session timeout</label>
+              <select
+                value={sessionTimeout}
+                onChange={(e) => setSessionTimeout(e.target.value)}
+                className="h-10 w-full rounded-lg border border-input bg-card px-3 text-sm outline-none"
+                data-testid="select-session-timeout"
+              >
+                <option value="1">1 hour</option>
+                <option value="8">8 hours</option>
+                <option value="24">24 hours (recommended)</option>
+                <option value="168">7 days</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-3 mt-6">
+            {saved && (
+              <span className="text-xs font-semibold text-emerald-700">Changes saved</span>
+            )}
+            <Button type="submit" testId="button-save-security" onClick={handleSave}>
+              Save settings
+            </Button>
+          </div>
+        </div>
+
+        {/* Data export */}
+        <div className="rounded-xl border border-border bg-card p-6 md:p-8">
+          <h2 className="text-lg font-bold">Data export</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Download a copy of your workspace data at any time.
+          </p>
+          <div className="mt-7 grid gap-3 sm:grid-cols-2">
+            <Button variant="outline" onClick={() => {}} testId="button-export-users">
+              <Download className="h-4 w-4" /> Export users
+            </Button>
+            <Button variant="outline" onClick={() => {}} testId="button-export-conferences">
+              <Download className="h-4 w-4" /> Export conferences
+            </Button>
+            <Button variant="outline" onClick={() => {}} testId="button-export-registrations">
+              <Download className="h-4 w-4" /> Export registrations
+            </Button>
+            <Button variant="outline" onClick={() => {}} testId="button-export-sessions">
+              <Download className="h-4 w-4" /> Export sessions
             </Button>
           </div>
         </div>
       </div>
     </PageFrame>
+  );
+}
+
+function ToggleRow({
+  label,
+  description,
+  checked,
+  onChange,
+  testId,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  testId: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div>
+        <div className="text-sm font-semibold">{label}</div>
+        <div className="text-xs text-muted-foreground">{description}</div>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={cn(
+          "relative h-6 w-11 rounded-full transition-colors",
+          checked ? "bg-[hsl(var(--primary))]" : "bg-muted",
+        )}
+        data-testid={testId}
+      >
+        <span
+          className={cn(
+            "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform",
+            checked ? "translate-x-5" : "translate-x-0.5",
+          )}
+        />
+      </button>
+    </div>
   );
 }
 

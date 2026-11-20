@@ -37,7 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/documents", label: "Documents", icon: Library, roles: ["admin", "organiser", "speaker"] },
   { href: "/reports", label: "Reports", icon: BarChart3, roles: ["admin", "organiser"] },
   { href: "/profile", label: "Profile", icon: UserRound, roles: ["admin", "organiser", "speaker", "attendee"] },
-  { href: "/settings", label: "Settings", icon: Settings2, roles: ["admin"] },
+  { href: "/settings", label: "Settings", icon: Settings2, roles: ["admin", "organiser"] },
 ];
 
 // Primary items for mobile bottom bar (visible to all roles)
@@ -91,6 +91,14 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               Management system
             </div>
           </div>
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="ml-auto rounded-md p-1.5 hover:bg-[hsl(var(--sidebar-accent))] md:hidden"
+            aria-label="Close sidebar"
+            data-testid="button-close-sidebar"
+          >
+            <X className="h-5 w-5 text-[hsl(var(--sidebar-foreground)/.65)]" />
+          </button>
         </div>
 
         <div className="mt-10 px-3 text-[10px] font-bold uppercase tracking-[.2em] text-[hsl(var(--sidebar-foreground)/.42)]">
