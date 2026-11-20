@@ -37,16 +37,17 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/schedule", label: "Schedule", icon: Clock3, roles: ["admin", "organiser"] },
   { href: "/documents", label: "Documents", icon: Library, roles: ["admin", "organiser", "speaker"] },
   { href: "/reports", label: "Reports", icon: BarChart3, roles: ["admin", "organiser"] },
-  // Participant (attendee/speaker)
+  // Participant
   { href: "/conferences", label: "Browse conferences", icon: CalendarDays, roles: ["attendee", "speaker"] },
-  { href: "/my-registrations", label: "My registrations", icon: UsersRound, roles: ["attendee", "speaker"] },
-  { href: "/schedule", label: "Browse sessions", icon: Clock3, roles: ["attendee", "speaker"] },
+  { href: "/my-registrations", label: "My registrations", icon: UsersRound, roles: ["attendee"] },
+  { href: "/schedule", label: "Sessions", icon: Clock3, roles: ["attendee"] },
+  { href: "/schedule", label: "My schedule", icon: Clock3, roles: ["speaker"] },
   { href: "/profile", label: "Profile", icon: UserRound, roles: ["admin", "organiser", "speaker", "attendee"] },
   { href: "/settings", label: "Settings", icon: Settings2, roles: ["admin", "organiser"] },
 ];
 
 // Primary items for mobile bottom bar (resolved per role below)
-const MOBILE_BOTTOM_HREFS = ["/dashboard", "/conferences", "/my-registrations", "/profile"];
+const MOBILE_BOTTOM_HREFS = ["/dashboard", "/conferences", "/schedule", "/profile"];
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, logout, isAuthenticated } = useAuth();

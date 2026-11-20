@@ -2059,9 +2059,65 @@ function ConferencesPage() {
   return <ConferenceBrowsePage />;
 }
 
+function SpeakerSchedulePage() {
+  const [sessions, setSessions] = useState<Array<{
+    id: string; title: string; conferenceTitle: string; startTime: string; endTime: string; venueName?: string | null; speakerRole?: string;
+  }>>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+    fetch(`${apiUrl}/api/speakers/me/sessions`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => setSessions(Array.isArray(d) ? d : []))
+      .catch(() => setSessions([]))
+      .finally(() => setLoading(false));
+  }, []);
+  return (
+    <PageFrame>
+      <PageHeader
+        eyebrow="Schedule"
+        title="My speaking sessions"
+        body="Sessions assigned to you within their conferences. Session attendance is managed through conference participation—no separate session registration."
+      />
+      <QueryState
+        loading={loading}
+        empty={!loading && sessions.length === 0}
+        emptyTitle="No sessions assigned"
+        emptyBody="When an organiser assigns you to a conference session, it will appear here."
+      >
+        <div className="grid gap-4">
+          {sessions.map((s) => (
+            <div key={s.id} className="rounded-xl border border-border bg-card p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-bold">{s.title}</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Conference: <span className="font-medium text-foreground">{s.conferenceTitle}</span>
+                  </p>
+                </div>
+                {s.speakerRole ? (
+                  <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold capitalize text-muted-foreground">
+                    {s.speakerRole}
+                  </span>
+                ) : null}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted-foreground">
+                <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{dateLabel(s.startTime)}</span>
+                <span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" />{timeLabel(s.startTime)} – {timeLabel(s.endTime)}</span>
+                {s.venueName ? <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{s.venueName}</span> : null}
+              </div>
+            </div>
+          ))}
+        </div>
+      </QueryState>
+    </PageFrame>
+  );
+}
+
 function SchedulePage() {
   const { user } = useAuth();
   if (user?.role === "admin" || user?.role === "organiser") return <Schedule />;
+  if (user?.role === "speaker") return <SpeakerSchedulePage />;
   return <SessionBrowsePage />;
 }
 
@@ -2119,13 +2175,13 @@ function Router() {
           </Route>
 
           <Route path="/attendee/conferences">
-            <AuthRoute>{() => <DashboardLayout><ConferenceBrowsePage /></DashboardLayout>}</AuthRoute>
+            <RoleRoute allow={["attendee"]}>{() => <ConferenceBrowsePage />}</RoleRoute>
           </Route>
           <Route path="/attendee/sessions">
-            <AuthRoute>{() => <DashboardLayout><SessionBrowsePage /></DashboardLayout>}</AuthRoute>
+            <RoleRoute allow={["attendee"]}>{() => <SessionBrowsePage />}</RoleRoute>
           </Route>
           <Route path="/my-registrations">
-            <AuthRoute>{() => <DashboardLayout><MyRegistrationsPage /></DashboardLayout>}</AuthRoute>
+            <RoleRoute allow={["attendee"]}>{() => <MyRegistrationsPage />}</RoleRoute>
           </Route>
 
           <Route path="/speakers">

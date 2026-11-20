@@ -615,7 +615,7 @@ router.delete("/venues/:venueId", authenticate, authorize("organiser", "admin"),
 
 // ========== SESSIONS ==========
 
-router.get("/sessions", authenticate, async (req, res) => {
+router.get("/sessions", authenticate, authorize("organiser", "admin"), async (req, res) => {
   const db = getDb(req);
   const query = ListSessionsQueryParams.parse(req.query);
   let sql = "SELECT * FROM sessions";
@@ -743,7 +743,7 @@ router.delete("/sessions/:sessionId", authenticate, authorize("organiser", "admi
 
 // ========== SPEAKERS ==========
 
-router.get("/speakers", authenticate, async (req, res) => {
+router.get("/speakers", authenticate, authorize("organiser", "admin"), async (req, res) => {
   const db = getDb(req);
   const query = ListSpeakersQueryParams.parse(req.query);
 
@@ -1145,6 +1145,7 @@ router.get("/conferences/:conferenceId/registrations", authenticate, authorize("
 router.delete("/conferences/:conferenceId/cancel", authenticate, async (req, res) => {
   const db = getDb(req);
   const userId = req.user?.id;
+  const { conferenceId } = req.params;
 
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
@@ -1155,13 +1156,23 @@ router.delete("/conferences/:conferenceId/cancel", authenticate, async (req, res
     .prepare(
       "DELETE FROM conference_attendees WHERE attendee_id = ? AND conference_id = ?",
     )
-    .bind(userId, req.params.conferenceId)
+    .bind(userId, conferenceId)
     .run();
 
   if (result.changes === 0) {
     res.status(404).json({ error: "Registration not found" });
     return;
   }
+
+  // Sessions belong to the conference; remove this attendee's session registrations for it
+  await db
+    .prepare(
+      `DELETE FROM attendee_sessions
+       WHERE attendee_id = ?
+         AND session_id IN (SELECT id FROM sessions WHERE conference_id = ?)`,
+    )
+    .bind(userId, conferenceId)
+    .run();
 
   res.status(204).send();
 });
@@ -1254,6 +1265,19 @@ router.post("/sessions/:sessionId/register", authenticate, async (req, res) => {
   const conferenceStatus = conference ? computeConferenceStatus(conference) : "draft";
   if (conferenceStatus !== "upcoming" && conferenceStatus !== "ongoing") {
     res.status(400).json({ error: "Conference is not open for registration" });
+    return;
+  }
+
+  // Sessions belong to a conference: attendee must be registered for the conference first
+  const conferenceRegistration = await db
+    .prepare(
+      "SELECT id FROM conference_attendees WHERE attendee_id = ? AND conference_id = ? AND status != 'cancelled'",
+    )
+    .bind(userId, session.conference_id)
+    .first();
+
+  if (!conferenceRegistration) {
+    res.status(400).json({ error: "Register for the conference before registering for its sessions" });
     return;
   }
 
@@ -1355,7 +1379,7 @@ router.delete("/sessions/:sessionId/cancel", authenticate, async (req, res) => {
 
   const result = await db
     .prepare(
-      "UPDATE attendee_sessions SET status = 'cancelled' WHERE attendee_id = ? AND session_id = ? AND status != 'cancelled'",
+      "DELETE FROM attendee_sessions WHERE attendee_id = ? AND session_id = ?",
     )
     .bind(userId, req.params.sessionId)
     .run();
@@ -1424,6 +1448,89 @@ router.delete("/session-speakers/:sessionSpeakerId", authenticate, authorize("or
   const params = RemoveSessionSpeakerParams.parse(req.params);
   await db.prepare("DELETE FROM session_speakers WHERE id = ?").bind(params.sessionSpeakerId).run();
   res.status(204).send();
+});
+
+router.get("/speakers/me/sessions", authenticate, authorize("speaker"), async (req, res) => {
+  const db = getDb(req);
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const speaker = await db
+    .prepare("SELECT id FROM speakers WHERE user_id = ?")
+    .bind(userId)
+    .first<any>();
+
+  if (!speaker) {
+    res.json([]);
+    return;
+  }
+
+  const result = await db
+    .prepare(`
+      SELECT
+        s.*,
+        c.title as conference_title,
+        c.start_date as conference_start_date,
+        c.end_date as conference_end_date,
+        c.status as conference_status,
+        v.name as venue_name,
+        ss.speaker_role
+      FROM session_speakers ss
+      INNER JOIN sessions s ON s.id = ss.session_id
+      INNER JOIN conferences c ON c.id = s.conference_id
+      LEFT JOIN venues v ON v.id = s.venue_id
+      WHERE ss.speaker_id = ?
+      ORDER BY s.start_time ASC
+    `)
+    .bind(speaker.id)
+    .all();
+
+  res.json((result.results as any[]).map((row: any) => ({
+    id: row.id,
+    conferenceId: row.conference_id,
+    conferenceTitle: row.conference_title ?? "Unknown",
+    conferenceStatus: row.conference_status ?? null,
+    venueId: row.venue_id ?? null,
+    venueName: row.venue_name ?? null,
+    title: row.title,
+    description: row.description ?? "",
+    startTime: row.start_time,
+    endTime: row.end_time,
+    speakerRole: row.speaker_role ?? "speaker",
+  })));
+});
+
+router.get("/speakers/me", authenticate, authorize("speaker"), async (req, res) => {
+  const db = getDb(req);
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const row = await db
+    .prepare(`
+      SELECT s.*, u.name, u.email
+      FROM speakers s
+      INNER JOIN users u ON u.id = s.user_id
+      WHERE s.user_id = ?
+    `)
+    .bind(userId)
+    .first<any>();
+  if (!row) {
+    res.status(404).json({ error: "Speaker profile not found" });
+    return;
+  }
+  res.json({
+    id: row.id,
+    userId: row.user_id,
+    name: row.name ?? "",
+    email: row.email ?? "",
+    bio: row.bio ?? "",
+    photoUrl: row.photo_url ?? null,
+  });
 });
 
 // ========== DOCUMENTS ==========
