@@ -198,7 +198,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
       <main className="flex-1 min-w-0 pb-safe md:pb-0">
         <header
-          className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border/80 bg-[hsl(var(--background)/.88)] px-5 backdrop-blur-md md:px-9"
+          className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar))] px-5 backdrop-blur-md md:px-9 text-[hsl(var(--sidebar-foreground))]"
         >
           <div className="flex items-center gap-3">
             <button
