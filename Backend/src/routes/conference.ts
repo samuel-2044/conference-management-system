@@ -780,7 +780,7 @@ router.get("/speakers", authenticate, async (req, res) => {
     bio: s.bio,
     photo_url: s.photo_url,
     session_count: 0,
-  }))))
+  })))));
 });
 
 router.post("/speakers", authenticate, authorize("organiser", "admin"), async (req, res) => {
@@ -908,7 +908,7 @@ router.get("/attendees", authenticate, authorize("organiser", "admin"), async (r
     conference_title: ca.conference_title ?? "Unknown",
     registration_date: ca.registration_date,
     status: ca.status,
-  }))))
+  })))));
 });
 
 router.post("/attendees", authenticate, authorize("organiser", "admin"), async (req, res) => {
@@ -1129,7 +1129,7 @@ router.get("/conferences/:conferenceId/registrations", authenticate, authorize("
     phone: cr.phone ?? cr.user_phone ?? null,
     organization: cr.organization ?? null,
     specialRequirements: cr.special_requirements ?? null,
-  }))));
+  })))));
 });
 router.delete("/conferences/:conferenceId/cancel", authenticate, async (req, res) => {
   const db = getDb(req);
