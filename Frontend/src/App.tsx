@@ -37,8 +37,6 @@ import "./index.css";
 
 const queryClient = new QueryClient();
 
-const cn = (...classes: Array<string | false | undefined>) =>
-  classes.filter(Boolean).join(" ");
 
 const initials = (name = "") =>
   name.split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase() || "CM";
@@ -365,6 +363,11 @@ function ConferenceModal({
         className="grid gap-4"
         onSubmit={(event) => {
           event.preventDefault();
+          const today = new Date().toISOString().split("T")[0];
+          if (form.startDate < today) {
+            alert("Conference start date cannot be in the past.");
+            return;
+          }
           mutation.mutate({ data: form as unknown as ConferenceInput }, { onSuccess: () => { onCreated(); onClose(); } });
         }}
       >
@@ -424,6 +427,8 @@ function Conferences() {
   const [showCreate, setShowCreate] = useState(false);
   const query = useListConferences({ search: search || undefined });
   const conferences = query.data ?? [];
+  const { user } = useAuth();
+  const canCreate = user?.role === "admin" || user?.role === "organiser";
 
   return (
     <PageFrame>
@@ -432,9 +437,11 @@ function Conferences() {
         title="Conferences"
         body="A clear view of everything your team is bringing into the room."
         action={
-          <Button onClick={() => setShowCreate(true)} testId="button-open-create-conference">
-            <Plus className="h-4 w-4" /> New conference
-          </Button>
+          canCreate ? (
+            <Button onClick={() => setShowCreate(true)} testId="button-open-create-conference">
+              <Plus className="h-4 w-4" /> New conference
+            </Button>
+          ) : null
         }
       />
       <div className="mb-5 flex flex-col gap-3 md:flex-row">
@@ -1324,12 +1331,14 @@ function SessionModal({
 }
 
 function Documents() {
+  const { user } = useAuth();
   const [type, setType] = useState("all");
   const [showUpload, setShowUpload] = useState(false);
   const query = useListDocuments({
     type: type as "all" | "paper" | "id-card" | "certificate" | "image",
   });
   const docs = query.data ?? [];
+  const canUpload = user?.role === "admin" || user?.role === "organiser";
 
   return (
     <PageFrame>
@@ -1338,9 +1347,11 @@ function Documents() {
         title="Documents"
         body="One considered home for papers, badges, certificates, and the files that keep a conference moving."
         action={
-          <Button onClick={() => setShowUpload(true)} testId="button-open-upload">
-            <CloudUpload className="h-4 w-4" /> Upload document
-          </Button>
+          canUpload ? (
+            <Button onClick={() => setShowUpload(true)} testId="button-open-upload">
+              <CloudUpload className="h-4 w-4" /> Upload document
+            </Button>
+          ) : null
         }
       />
       <div className="mb-5 flex gap-2 overflow-x-auto">
@@ -1954,22 +1965,54 @@ function RoleDashboard() {
     case "organiser": return <OrganiserDashboard />;
     case "speaker": return <SpeakerDashboard />;
     case "attendee": return <AttendeeDashboard />;
-    default: return <AdminDashboard />;
+    default: return <AttendeeDashboard />;
   }
 }
 
-function ModulePage() {
-  const [location] = useLocation();
-  if (location === "/conferences" || location === "/conferences/:id") return <Conferences />;
-  if (location === "/speakers") return <Speakers />;
-  if (location === "/attendees") return <Attendees />;
-  if (location === "/venues") return <Venues />;
-  if (location === "/schedule") return <Schedule />;
-  if (location === "/documents") return <Documents />;
-  if (location === "/reports") return <Reports />;
-  if (location === "/profile") return <Profile />;
-  if (location === "/settings") return <Settings />;
-  return <RoleDashboard />;
+function ForbiddenPage() {
+  return (
+    <PageFrame>
+      <PageHeader eyebrow="Access" title="Not authorized" body="You do not have permission to view this page." />
+    </PageFrame>
+  );
+}
+
+function RoleRoute({
+  allow,
+  children,
+}: {
+  allow: Array<"admin" | "organiser" | "speaker" | "attendee">;
+  children: () => React.ReactNode;
+}) {
+  const { user, isLoading, isAuthenticated } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      setLocation("/login");
+    }
+  }, [isLoading, isAuthenticated, setLocation]);
+
+  if (isLoading) {
+    return <div className="min-h-[100dvh] flex items-center justify-center"><LoadingRows count={2} /></div>;
+  }
+  if (!isAuthenticated || !user) return null;
+  if (!allow.includes(user.role)) {
+    return <DashboardLayout><ForbiddenPage /></DashboardLayout>;
+  }
+  return <DashboardLayout>{children()}</DashboardLayout>;
+}
+
+function ConferencesPage() {
+  const { user } = useAuth();
+  if (user?.role === "admin" || user?.role === "organiser") return <Conferences />;
+  return <ConferenceBrowsePage />;
+}
+
+function SchedulePage() {
+  const { user } = useAuth();
+  if (user?.role === "admin" || user?.role === "organiser") return <Schedule />;
+  return <SessionBrowsePage />;
 }
 
 function AuthRoute({ children }: { children: () => React.ReactNode }) {
@@ -2017,41 +2060,44 @@ function Router() {
           <Route path="/dashboard">
             <AuthRoute>{() => <DashboardLayout><RoleDashboard /></DashboardLayout>}</AuthRoute>
           </Route>
+
           <Route path="/conferences">
-            <AuthRoute>{() => <DashboardLayout><Conferences /></DashboardLayout>}</AuthRoute>
+            <AuthRoute>{() => <DashboardLayout><ConferencesPage /></DashboardLayout>}</AuthRoute>
           </Route>
           <Route path="/conferences/:id">
-            <AuthRoute>{() => <DashboardLayout><ConferenceDetailPage /></DashboardLayout>}</AuthRoute>
+            <RoleRoute allow={["admin", "organiser"]}>{() => <ConferenceDetailPage />}</RoleRoute>
           </Route>
-          <Route path="/speakers">
-            <AuthRoute>{() => <DashboardLayout><Speakers /></DashboardLayout>}</AuthRoute>
-          </Route>
-          <Route path="/attendees">
-            <AuthRoute>{() => <DashboardLayout><Attendees /></DashboardLayout>}</AuthRoute>
-          </Route>
+
           <Route path="/attendee/conferences">
             <AuthRoute>{() => <DashboardLayout><ConferenceBrowsePage /></DashboardLayout>}</AuthRoute>
           </Route>
           <Route path="/attendee/sessions">
             <AuthRoute>{() => <DashboardLayout><SessionBrowsePage /></DashboardLayout>}</AuthRoute>
           </Route>
+
+          <Route path="/speakers">
+            <RoleRoute allow={["admin", "organiser"]}>{() => <Speakers />}</RoleRoute>
+          </Route>
+          <Route path="/attendees">
+            <RoleRoute allow={["admin", "organiser"]}>{() => <Attendees />}</RoleRoute>
+          </Route>
           <Route path="/venues">
-            <AuthRoute>{() => <DashboardLayout><Venues /></DashboardLayout>}</AuthRoute>
+            <RoleRoute allow={["admin", "organiser"]}>{() => <Venues />}</RoleRoute>
           </Route>
           <Route path="/schedule">
-            <AuthRoute>{() => <DashboardLayout><Schedule /></DashboardLayout>}</AuthRoute>
+            <AuthRoute>{() => <DashboardLayout><SchedulePage /></DashboardLayout>}</AuthRoute>
           </Route>
           <Route path="/documents">
-            <AuthRoute>{() => <DashboardLayout><Documents /></DashboardLayout>}</AuthRoute>
+            <RoleRoute allow={["admin", "organiser", "speaker"]}>{() => <Documents />}</RoleRoute>
           </Route>
           <Route path="/reports">
-            <AuthRoute>{() => <DashboardLayout><Reports /></DashboardLayout>}</AuthRoute>
+            <RoleRoute allow={["admin", "organiser"]}>{() => <Reports />}</RoleRoute>
           </Route>
           <Route path="/profile">
             <AuthRoute>{() => <DashboardLayout><Profile /></DashboardLayout>}</AuthRoute>
           </Route>
           <Route path="/settings">
-            <AuthRoute>{() => <DashboardLayout><Settings /></DashboardLayout>}</AuthRoute>
+            <RoleRoute allow={["admin", "organiser"]}>{() => <Settings />}</RoleRoute>
           </Route>
 
           {/* Redirect root to login or dashboard */}

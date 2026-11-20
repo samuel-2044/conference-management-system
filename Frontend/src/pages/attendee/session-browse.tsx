@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { CalendarDays, Clock3, UsersRound, AlertCircle, Building2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { CalendarDays, Clock3, UsersRound, AlertCircle, Building2, CheckCircle } from "lucide-react";
 import {
   useListAvailableSessions,
   useRegisterSession,
@@ -10,39 +10,54 @@ import { Toaster } from "@/components/ui/toaster";
 import { toast } from "sonner";
 
 export function SessionBrowsePage() {
-  const [selectedSession, setSelectedSession] = useState<string | null>(null);
+  const [registeredIds, setRegisteredIds] = useState<Set<string>>(new Set());
+  const [busyId, setBusyId] = useState<string | null>(null);
   const query = useListAvailableSessions();
   const sessions = query.data ?? [];
   const registerMutation = useRegisterSession();
   const cancelMutation = useCancelSessionRegistration();
 
+  const visibleSessions = useMemo(
+    () => sessions.filter((s) => registeredIds.has(s.sessionId) || (s.registrationOpen && !s.isFull)),
+    [sessions, registeredIds],
+  );
+
   const handleRegister = (sessionId: string) => {
+    setBusyId(sessionId);
     registerMutation.mutate(
       { sessionId, data: { sessionId } },
       {
         onSuccess: () => {
+          setRegisteredIds((prev) => new Set(prev).add(sessionId));
           toast.success("Registered for session");
           query.refetch();
-          setSelectedSession(null);
         },
-        onError: (err) => {
-          toast.error(err.message || "Registration failed");
+        onError: (err: any) => {
+          toast.error(err?.message || "Registration failed");
         },
+        onSettled: () => setBusyId(null),
       },
     );
   };
 
   const handleCancel = (sessionId: string) => {
+    setBusyId(sessionId);
     cancelMutation.mutate(
       { sessionId },
       {
         onSuccess: () => {
+          setRegisteredIds((prev) => {
+            const next = new Set(prev);
+            next.delete(sessionId);
+            return next;
+          });
           toast.success("Registration cancelled");
           query.refetch();
         },
-        onError: (err) => {
-          toast.error(err.message || "Cancellation failed");
+        onError: (err: any) => {
+          toast.error(err?.message || "Cancellation failed");
         },
+        onSettled: () => setBusyId(null),
       },
     );
   };
@@ -51,9 +66,9 @@ export function SessionBrowsePage() {
     <div className="space-y-6">
       <Toaster />
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Available Sessions</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Browse sessions</h1>
         <p className="text-sm text-muted-foreground">
-          Browse and register for sessions. Registering for a session reserves your seat.
+          Register for sessions to reserve your seat. You cannot register for sessions that conflict with your schedule.
         </p>
       </div>
 
@@ -65,23 +80,24 @@ export function SessionBrowsePage() {
 
       {!query.isLoading && (
         <div className="grid gap-4">
-          {sessions.length === 0 ? (
+          {visibleSessions.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border bg-card p-12 text-center">
               <Clock3 className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-              <h3 className="font-semibold">No sessions available</h3>
+              <h3 className="font-semibold">No sessions open for registration</h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 Check back later for upcoming sessions.
               </p>
             </div>
           ) : (
-            sessions.map((session) => {
-              const isRegistered = selectedSession === session.sessionId;
+            visibleSessions.map((session) => {
+              const isRegistered = registeredIds.has(session.sessionId);
+              const closed = session.isFull || !session.registrationOpen;
               return (
                 <div
                   key={session.sessionId}
                   className={`rounded-xl border p-5 transition ${
-                    session.isFull || !session.registrationOpen
-                      ? "border-border bg-secondary/30 opacity-60"
+                    closed && !isRegistered
+                      ? "border-border bg-secondary/30 opacity-80"
                       : "border-border bg-card hover:border-primary hover:shadow-md"
                   }`}
                 >
@@ -92,13 +108,20 @@ export function SessionBrowsePage() {
                         {session.conferenceTitle}
                       </p>
                     </div>
-                    {session.isFull && (
-                      <span className="text-destructive">
-                        <AlertCircle className="h-3.5 w-3.5" /> Full
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 text-xs font-semibold">
+                      {session.isFull && (
+                        <span className="inline-flex items-center gap-1 text-destructive">
+                          <AlertCircle className="h-3.5 w-3.5" /> Full
+                        </span>
+                      )}
+                      {isRegistered && (
+                        <span className="inline-flex items-center gap-1 text-emerald-700">
+                          <CheckCircle className="h-3.5 w-3.5" /> Registered
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="mt-3 space-y-1 text-sm">
+                  <div className="mt-3 space-y-1 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
                       <CalendarDays className="h-3.5 w-3.5" />
                       <span>{new Date(session.startTime).toLocaleDateString()}</span>
@@ -114,27 +137,33 @@ export function SessionBrowsePage() {
                       <Building2 className="h-3.5 w-3.5" />
                       <span>{session.venueName ?? "TBD"}</span>
                     </div>
-                    <p className="text-muted-foreground">
-                      {session.registeredCount}{" "}
-                      {session.capacity !== null ? `/ ${session.capacity}` : ""} registered
+                    <p className="flex items-center gap-1">
+                      <UsersRound className="h-3.5 w-3.5" />
+                      {session.registeredCount}
+                      {session.capacity != null ? ` / ${session.capacity}` : ""} registered
+                      {session.capacity != null ? ` · ${session.availableCount} spots available` : ""}
                     </p>
-                    {session.availableCount !== null && (
-                      <p className="text-muted-foreground">
-                        {session.availableCount} spots available
-                      </p>
-                    )}
                   </div>
                   <div className="mt-4">
-                    {session.isFull || !session.registrationOpen ? (
+                    {isRegistered ? (
+                      <Button
+                        variant="destructive"
+                        className="w-full"
+                        disabled={busyId === session.sessionId}
+                        onClick={() => handleCancel(session.sessionId)}
+                      >
+                        Cancel registration
+                      </Button>
+                    ) : closed ? (
                       <Button variant="outline" disabled className="w-full">
                         {session.isFull ? "Full" : "Closed"}
                       </Button>
-                    ) : isRegistered ? (
-                      <Button variant="destructive" onClick={() => handleCancel(session.sessionId)} className="w-full">
-                        Cancel registration
-                      </Button>
                     ) : (
-                      <Button onClick={() => handleRegister(session.sessionId)} className="w-full">
+                      <Button
+                        className="w-full"
+                        disabled={busyId === session.sessionId}
+                        onClick={() => handleRegister(session.sessionId)}
+                      >
                         Register
                       </Button>
                     )}

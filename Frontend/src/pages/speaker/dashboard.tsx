@@ -1,6 +1,6 @@
 import { useAuth } from "@/context/auth-context";
 import { useListSessions, useListConferences, useListSpeakers } from "@workspace/api-client-react";
-import { CalendarDays, UserRound, Clock3, ArrowRight, MapPin, CheckCircle2, FileText } from "lucide-react";
+import { CalendarDays, UserRound, Clock3, ArrowRight, CheckCircle2, FileText } from "lucide-react";
 import { Link } from "wouter";
 
 export function SpeakerDashboard() {
@@ -28,7 +28,7 @@ export function SpeakerDashboard() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Speaker Dashboard</h1>
         <p className="text-sm text-muted-foreground">
-          View your assigned sessions and manage your speaker profile. Welcome back, {user?.name}.
+          View upcoming sessions, browse conferences, and manage your profile. Welcome back, {user?.name}.
         </p>
       </div>
 
@@ -47,9 +47,9 @@ export function SpeakerDashboard() {
       <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
         <div className="rounded-xl border border-border bg-card p-6">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-bold">My upcoming sessions</h2>
+            <h2 className="text-lg font-bold">Upcoming sessions</h2>
             <Link href="/schedule" className="text-xs font-semibold text-[hsl(var(--primary))] hover:underline flex items-center gap-1">
-              Full schedule <ArrowRight className="h-3 w-3" />
+              Browse sessions <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
           {upcomingSessions.length > 0 ? (
@@ -71,7 +71,7 @@ export function SpeakerDashboard() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No upcoming sessions assigned yet.</p>
+            <p className="text-sm text-muted-foreground">No upcoming sessions scheduled.</p>
           )}
         </div>
 
@@ -104,7 +104,7 @@ export function SpeakerDashboard() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Link href="/schedule" className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-secondary/50 transition-colors">
             <Clock3 className="h-4 w-4 text-[hsl(var(--primary))]" />
-            <span className="text-sm font-medium">View schedule</span>
+            <span className="text-sm font-medium">Browse sessions</span>
           </Link>
           <Link href="/conferences" className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-secondary/50 transition-colors">
             <CalendarDays className="h-4 w-4 text-[hsl(var(--primary))]" />

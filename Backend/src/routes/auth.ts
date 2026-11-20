@@ -4,6 +4,8 @@ import {
   login,
   logout,
   me,
+  updateMe,
+  deleteAccount,
   listMembers,
   addMember,
   updateMember,
@@ -20,6 +22,8 @@ router.post("/auth/signup", signup);
 router.post("/auth/login", login);
 router.post("/auth/logout", logout);
 router.get("/auth/me", authenticate, me);
+router.patch("/auth/me", authenticate, updateMe);
+router.delete("/auth/me", authenticate, deleteAccount);
 
 // Member management (admin, organiser)
 router.get("/auth/members", authenticate, authorize("admin", "organiser"), listMembers);

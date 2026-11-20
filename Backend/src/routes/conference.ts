@@ -92,6 +92,17 @@ function getDb(req: any): D1Database {
   return req.env?.convene_db;
 }
 
+function startOfTodayUtc(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
+function parseDateOnly(value: string | Date): Date {
+  const d = value instanceof Date ? value : new Date(value);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+
+
 function toCamel(obj: any): any {
   if (Array.isArray(obj)) return obj.map(toCamel);
   if (obj !== null && typeof obj === "object") {
@@ -287,6 +298,18 @@ router.get("/conferences", authenticate, async (_req, res) => {
 router.post("/conferences", authenticate, authorize("organiser", "admin"), async (req, res) => {
   const db = getDb(req);
   const body = CreateConferenceBody.parse(req.body);
+
+  const startDate = parseDateOnly(body.startDate as any);
+  const endDate = parseDateOnly(body.endDate as any);
+  if (startDate < startOfTodayUtc()) {
+    res.status(400).json({ success: false, message: "Conference start date cannot be in the past" });
+    return;
+  }
+  if (endDate < startDate) {
+    res.status(400).json({ success: false, message: "Conference end date must be on or after the start date" });
+    return;
+  }
+
   const created = {
     id: id("conf"),
     title: body.title,
@@ -441,12 +464,23 @@ router.patch("/conferences/:conferenceId", authenticate, authorize("organiser", 
   const body = UpdateConferenceBody.parse(req.body);
 
   const existing = await db
-    .prepare("SELECT id FROM conferences WHERE id = ?")
+    .prepare("SELECT * FROM conferences WHERE id = ?")
     .bind(params.conferenceId)
-    .first();
+    .first() as any;
 
   if (!existing) {
     res.status(404).json({ error: "Conference not found" });
+    return;
+  }
+
+  const nextStart = body.startDate !== undefined ? parseDateOnly(body.startDate as any) : parseDateOnly(existing.start_date);
+  const nextEnd = body.endDate !== undefined ? parseDateOnly(body.endDate as any) : parseDateOnly(existing.end_date);
+  if (body.startDate !== undefined && nextStart < startOfTodayUtc()) {
+    res.status(400).json({ success: false, message: "Conference start date cannot be in the past" });
+    return;
+  }
+  if (nextEnd < nextStart) {
+    res.status(400).json({ success: false, message: "Conference end date must be on or after the start date" });
     return;
   }
 
@@ -455,8 +489,8 @@ router.patch("/conferences/:conferenceId", authenticate, authorize("organiser", 
 
   if (body.title !== undefined) { fields.push("title = ?"); values.push(body.title); }
   if (body.description !== undefined) { fields.push("description = ?"); values.push(body.description); }
-  if (body.startDate !== undefined) { fields.push("start_date = ?"); values.push(new Date(body.startDate).toISOString()); }
-  if (body.endDate !== undefined) { fields.push("end_date = ?"); values.push(new Date(body.endDate).toISOString()); }
+  if (body.startDate !== undefined) { fields.push("start_date = ?"); values.push(new Date(body.startDate as any).toISOString()); }
+  if (body.endDate !== undefined) { fields.push("end_date = ?"); values.push(new Date(body.endDate as any).toISOString()); }
 
   if (fields.length > 0) {
     values.push(params.conferenceId);
@@ -1141,8 +1175,8 @@ router.post("/sessions/:sessionId/register", authenticate, async (req, res) => {
     return;
   }
 
-  const hasConflict = await isAttendeeAvailableForSession(db, userId, session.start_time, session.end_time);
-  if (!hasConflict) {
+  const isAvailable = await isAttendeeAvailableForSession(db, userId, session.start_time, session.end_time);
+  if (!isAvailable) {
     res.status(400).json({ error: "You have a scheduling conflict with another registered session" });
     return;
   }

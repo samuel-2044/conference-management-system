@@ -9,6 +9,7 @@ import {
   logActivity,
 } from "../middleware/auth";
 import { z } from "zod";
+import { logger } from "../lib/logger";
 
 const SignupBodySchema = z.object({
   name: z.string().min(1, "Name is required"),

@@ -29,24 +29,23 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "organiser", "speaker", "attendee"] },
-  { href: "/conferences", label: "Conferences", icon: CalendarDays, roles: ["admin", "organiser", "speaker", "attendee"] },
+  // Management (admin/organiser)
+  { href: "/conferences", label: "Conferences", icon: CalendarDays, roles: ["admin", "organiser"] },
   { href: "/speakers", label: "Speakers", icon: UserRound, roles: ["admin", "organiser"] },
   { href: "/attendees", label: "Attendees", icon: UsersRound, roles: ["admin", "organiser"] },
   { href: "/venues", label: "Venues", icon: Building2, roles: ["admin", "organiser"] },
-  { href: "/schedule", label: "Schedule", icon: Clock3, roles: ["admin", "organiser", "speaker", "attendee"] },
+  { href: "/schedule", label: "Schedule", icon: Clock3, roles: ["admin", "organiser"] },
   { href: "/documents", label: "Documents", icon: Library, roles: ["admin", "organiser", "speaker"] },
   { href: "/reports", label: "Reports", icon: BarChart3, roles: ["admin", "organiser"] },
+  // Participant (attendee/speaker)
+  { href: "/conferences", label: "Browse conferences", icon: CalendarDays, roles: ["attendee", "speaker"] },
+  { href: "/schedule", label: "Browse sessions", icon: Clock3, roles: ["attendee", "speaker"] },
   { href: "/profile", label: "Profile", icon: UserRound, roles: ["admin", "organiser", "speaker", "attendee"] },
   { href: "/settings", label: "Settings", icon: Settings2, roles: ["admin", "organiser"] },
 ];
 
-// Primary items for mobile bottom bar (visible to all roles)
-const MOBILE_BOTTOM_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/conferences", label: "Conferences", icon: CalendarDays },
-  { href: "/schedule", label: "Schedule", icon: Clock3 },
-  { href: "/profile", label: "Profile", icon: UserRound },
-];
+// Primary items for mobile bottom bar (resolved per role below)
+const MOBILE_BOTTOM_HREFS = ["/dashboard", "/conferences", "/schedule", "/profile"];
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, logout, isAuthenticated } = useAuth();
@@ -58,10 +57,12 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
     [user],
   );
 
-  const bottomNavItems = useMemo(
-    () => MOBILE_BOTTOM_ITEMS.filter((item) => !user || NAV_ITEMS.find((n) => n.href === item.href && n.roles.includes(user.role))),
-    [user],
-  );
+  const bottomNavItems = useMemo(() => {
+    if (!user) return [] as NavItem[];
+    return MOBILE_BOTTOM_HREFS
+      .map((href) => NAV_ITEMS.find((n) => n.href === href && n.roles.includes(user.role)))
+      .filter((n): n is NavItem => Boolean(n));
+  }, [user]);
 
   if (!isAuthenticated || !user) {
     return null;
