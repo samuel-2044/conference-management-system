@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, UsersRound, AlertCircle, CheckCircle, ClipboardList, Mic2 } from "lucide-react";
 import {
   useListAvailableConferences,
@@ -34,6 +34,27 @@ export function ConferenceBrowsePage() {
   const myRegsQuery = useListMyConferenceRegistrations({ query: { enabled: !isSpeaker } as any });
   const conferences = query.data ?? [];
   const myRegs = isSpeaker ? [] : (myRegsQuery.data ?? []);
+  const [speakerAllocatedConferenceIds, setSpeakerAllocatedConferenceIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!isSpeaker) return;
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+    let cancelled = false;
+    fetch(`${apiUrl}/api/speakers/me/sessions`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((rows) => {
+        if (cancelled) return;
+        const ids = new Set<string>();
+        (Array.isArray(rows) ? rows : []).forEach((row: any) => {
+          if (row?.conferenceId) ids.add(row.conferenceId);
+        });
+        setSpeakerAllocatedConferenceIds(ids);
+      })
+      .catch(() => {
+        if (!cancelled) setSpeakerAllocatedConferenceIds(new Set());
+      });
+    return () => { cancelled = true; };
+  }, [isSpeaker]);
 
   const registeredIds = useMemo(
     () => new Set(myRegs.filter((r: any) => r.status !== "cancelled").map((r: any) => r.conferenceId)),
@@ -47,10 +68,10 @@ export function ConferenceBrowsePage() {
   const registerMutation = useRegisterConference();
   const cancelMutation = useCancelConferenceRegistration();
 
-  const visibleConferences = useMemo(
-    () => conferences.filter((c) => registeredIds.has(c.conferenceId) || (c.registrationOpen && !c.isFull)),
-    [conferences, registeredIds],
-  );
+  const visibleConferences = useMemo(() => {
+    if (isSpeaker) return conferences;
+    return conferences.filter((c) => registeredIds.has(c.conferenceId) || (c.registrationOpen && !c.isFull));
+  }, [conferences, registeredIds, isSpeaker]);
 
   const openForm = (conferenceId: string) => {
     setForm((prev) => ({
@@ -114,7 +135,7 @@ export function ConferenceBrowsePage() {
         <h1 className="text-2xl font-bold tracking-tight">Browse conferences</h1>
         <p className="text-sm text-muted-foreground">
           {isSpeaker
-            ? "View conferences where you may be assigned to present in sessions. Speaker participation is arranged by organisers through session assignments."
+            ? "View all conferences and see whether you have been allocated to present. Organisers assign speakers to conference sessions."
             : "Register for open conferences by providing your details. You can withdraw from My registrations."}
         </p>
       </div>
@@ -130,7 +151,7 @@ export function ConferenceBrowsePage() {
           {visibleConferences.length === 0 ? (
             <div className="col-span-3 rounded-xl border border-dashed border-border bg-card p-12 text-center">
               <ClipboardList className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-              <h3 className="font-semibold">No conferences open for registration</h3>
+              <h3 className="font-semibold">{isSpeaker ? "No conferences available" : "No conferences open for registration"}</h3>
               <p className="mt-1 text-sm text-muted-foreground">Check back later for upcoming conferences.</p>
             </div>
           ) : (
@@ -153,11 +174,21 @@ export function ConferenceBrowsePage() {
                         <AlertCircle className="h-3.5 w-3.5" /> Full
                       </span>
                     )}
-                    {isRegistered && (
+                    {isSpeaker ? (
+                      speakerAllocatedConferenceIds.has(conference.conferenceId) ? (
+                        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700">
+                          <CheckCircle className="h-3.5 w-3.5" /> Allocated to present
+                        </span>
+                      ) : (
+                        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-muted-foreground">
+                          Not allocated
+                        </span>
+                      )
+                    ) : isRegistered ? (
                       <span className="ml-auto inline-flex items-center gap-1 text-emerald-700">
                         <CheckCircle className="h-3.5 w-3.5" /> Registered
                       </span>
-                    )}
+                    ) : null}
                   </div>
                   <h2 className="text-lg font-bold">{conference.title}</h2>
                   <div className="mt-3 space-y-1 text-sm text-muted-foreground">
@@ -171,15 +202,21 @@ export function ConferenceBrowsePage() {
 
                   <div className="mt-5 space-y-3">
                     {isSpeaker ? (
-                      <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2 font-medium text-foreground">
-                          <Mic2 className="h-4 w-4 text-[hsl(var(--primary))]" />
-                          Speaker participation
+                      speakerAllocatedConferenceIds.has(conference.conferenceId) ? (
+                        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                          <div className="flex items-center gap-2 font-medium">
+                            <Mic2 className="h-4 w-4" /> Allocated to present
+                          </div>
+                          <p className="mt-1 text-xs">You have been assigned to present in this conference. Check My schedule for your sessions.</p>
                         </div>
-                        <p className="mt-1 text-xs">
-                          Speakers don’t register as attendees. If you’re assigned to present, your sessions will appear in My schedule.
-                        </p>
-                      </div>
+                      ) : (
+                        <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2 font-medium text-foreground">
+                            <Mic2 className="h-4 w-4 text-[hsl(var(--primary))]" /> Not allocated
+                          </div>
+                          <p className="mt-1 text-xs">You have not been assigned to present in this conference.</p>
+                        </div>
+                      )
                     ) : isRegistered ? (
                       <Button variant="destructive" className="w-full" disabled={busyId === conference.conferenceId} onClick={() => handleCancel(conference.conferenceId)}>
                         {busyId === conference.conferenceId ? "Withdrawing…" : "Withdraw registration"}
