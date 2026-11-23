@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { CalendarDays, UsersRound, AlertCircle, CheckCircle, ClipboardList } from "lucide-react";
+import { CalendarDays, UsersRound, AlertCircle, CheckCircle, ClipboardList, Mic2 } from "lucide-react";
 import {
   useListAvailableConferences,
   useRegisterConference,
@@ -29,10 +29,11 @@ const emptyForm = (user?: { name?: string; email?: string } | null): FormState =
 
 export function ConferenceBrowsePage() {
   const { user } = useAuth();
+  const isSpeaker = user?.role === "speaker";
   const query = useListAvailableConferences();
-  const myRegsQuery = useListMyConferenceRegistrations();
+  const myRegsQuery = useListMyConferenceRegistrations({ query: { enabled: !isSpeaker } as any });
   const conferences = query.data ?? [];
-  const myRegs = myRegsQuery.data ?? [];
+  const myRegs = isSpeaker ? [] : (myRegsQuery.data ?? []);
 
   const registeredIds = useMemo(
     () => new Set(myRegs.filter((r: any) => r.status !== "cancelled").map((r: any) => r.conferenceId)),
@@ -112,17 +113,19 @@ export function ConferenceBrowsePage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Browse conferences</h1>
         <p className="text-sm text-muted-foreground">
-          Register for open conferences by providing your details. You can withdraw from My registrations.
+          {isSpeaker
+            ? "View conferences where you may be assigned to present in sessions. Speaker participation is arranged by organisers through session assignments."
+            : "Register for open conferences by providing your details. You can withdraw from My registrations."}
         </p>
       </div>
 
-      {(query.isLoading || myRegsQuery.isLoading) && (
+      {(query.isLoading || (!isSpeaker && myRegsQuery.isLoading)) && (
         <div className="h-64 flex items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
       )}
 
-      {!query.isLoading && !myRegsQuery.isLoading && (
+      {!query.isLoading && (isSpeaker || !myRegsQuery.isLoading) && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {visibleConferences.length === 0 ? (
             <div className="col-span-3 rounded-xl border border-dashed border-border bg-card p-12 text-center">
@@ -167,7 +170,17 @@ export function ConferenceBrowsePage() {
                   </div>
 
                   <div className="mt-5 space-y-3">
-                    {isRegistered ? (
+                    {isSpeaker ? (
+                      <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2 font-medium text-foreground">
+                          <Mic2 className="h-4 w-4 text-[hsl(var(--primary))]" />
+                          Speaker participation
+                        </div>
+                        <p className="mt-1 text-xs">
+                          Speakers don’t register as attendees. If you’re assigned to present, your sessions will appear in My schedule.
+                        </p>
+                      </div>
+                    ) : isRegistered ? (
                       <Button variant="destructive" className="w-full" disabled={busyId === conference.conferenceId} onClick={() => handleCancel(conference.conferenceId)}>
                         {busyId === conference.conferenceId ? "Withdrawing…" : "Withdraw registration"}
                       </Button>

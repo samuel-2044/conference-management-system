@@ -84,7 +84,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           "md:relative md:translate-x-0",
         )}
       >
-        <div className="flex items-center gap-3 px-3 mb-10">
+        <div className="flex items-center gap-3 px-3">
           <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg">
             <img src="/favicon.svg" alt="Convene" className="h-9 w-9" />
           </div>
@@ -104,7 +104,32 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           </button>
         </div>
 
-        <div className="mt-10 px-3 text-[10px] font-bold uppercase tracking-[.2em] text-[hsl(var(--sidebar-foreground)/.42)]">
+        <div className="mt-6 px-2">
+          <div className="px-1 text-[10px] font-bold uppercase tracking-[.2em] text-[hsl(var(--sidebar-foreground)/.42)] mb-2">
+            Account
+          </div>
+          <div className="flex items-center gap-3 rounded-lg border border-[hsl(var(--sidebar-border))] px-3 py-2">
+            <div className="h-8 w-8 shrink-0 rounded-full bg-[hsl(var(--accent)/.24)] flex items-center justify-center text-[hsl(var(--primary))] font-bold text-xs">
+              {user.name.split(" ").map((n) => n[0]).join("").toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="block truncate text-sm font-semibold">{user.name}</div>
+              <div className="block text-[11px] text-[hsl(var(--sidebar-foreground)/.5)]">
+                {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+              </div>
+            </div>
+          </div>
+          <Button
+            onClick={handleLogout}
+            variant="ghost"
+            className="mt-2 w-full h-9 text-[hsl(var(--sidebar-foreground)/.65)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))] flex items-center justify-center gap-2"
+            data-testid="button-logout"
+          >
+            <LogOut className="h-4 w-4" /> Logout
+          </Button>
+        </div>
+
+        <div className="mt-8 px-3 text-[10px] font-bold uppercase tracking-[.2em] text-[hsl(var(--sidebar-foreground)/.42)]">
           Navigation
         </div>
         <nav className="mt-3 grid gap-1 px-2">
@@ -132,32 +157,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           })}
         </nav>
 
-        <div className="mt-auto pt-6 border-t border-[hsl(var(--sidebar-border))]">
-          <div className="px-3 mb-4">
-            <div className="text-[10px] font-bold uppercase tracking-[.2em] text-[hsl(var(--sidebar-foreground)/.42)] mb-2">
-              Account
-            </div>
-            <div className="flex items-center gap-3 rounded-lg border border-[hsl(var(--sidebar-border))] px-3 py-2">
-              <div className="h-8 w-8 rounded-full bg-[hsl(var(--accent)/.24)] flex items-center justify-center text-[hsl(var(--primary))] font-bold text-xs">
-                {user.name.split(" ").map((n) => n[0]).join("").toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="block truncate text-sm font-semibold">{user.name}</div>
-                <div className="block text-[11px] text-[hsl(var(--sidebar-foreground)/.5)]">
-                  {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                </div>
-              </div>
-            </div>
-          </div>
-          <Button
-            onClick={handleLogout}
-            variant="ghost"
-            className="w-full h-10 text-[hsl(var(--sidebar-foreground)/.65)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))] flex items-center justify-center gap-2"
-            data-testid="button-logout"
-          >
-            <LogOut className="h-4 w-4" /> Logout
-          </Button>
-        </div>
+
       </aside>
 
       {mobileOpen && (
