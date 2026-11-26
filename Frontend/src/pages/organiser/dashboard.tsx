@@ -17,8 +17,8 @@ export function OrganiserDashboard() {
     .slice(0, 4);
 
   const stats = [
-    { label: "My conferences", value: conferences?.length ?? 0, icon: CalendarDays },
-    { label: "My sessions", value: sessions?.length ?? 0, icon: Clock3 },
+    { label: "Conferences", value: conferences?.length ?? 0, icon: CalendarDays },
+    { label: "Sessions", value: sessions?.length ?? 0, icon: Clock3 },
     { label: "Total speakers", value: speakers?.length ?? 0, icon: UsersRound },
     { label: "Registrations", value: report?.total ?? 0, icon: CheckCircle2 },
   ];
