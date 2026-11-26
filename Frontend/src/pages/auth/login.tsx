@@ -45,7 +45,7 @@ export function LoginPage() {
               </div>
             </div>
 
-            <h2 className="text-4xl xl:text-5xl font-bold tracking-tight text-[hsl(var(--foreground))] leading-tight">
+            <h2 className="text-2xl xl:text-3xl font-bold tracking-tight text-[hsl(var(--foreground))] leading-tight whitespace-nowrap">
               Manage conferences with clarity<span className="text-[hsl(var(--primary))]">.</span>
             </h2>
             <p className="mt-5 text-base text-[hsl(var(--muted-foreground))] leading-relaxed max-w-md">
