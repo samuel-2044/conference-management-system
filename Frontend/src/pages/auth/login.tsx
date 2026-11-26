@@ -28,126 +28,122 @@ export function LoginPage() {
   };
 
   return (
-    <div className="auth-page min-h-[100dvh] w-full bg-background relative overflow-hidden">
-      <div className="absolute inset-0 z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[50rem] h-[50rem] rounded-full bg-[hsl(var(--primary)/.12)] blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40rem] h-[40rem] rounded-full bg-[hsl(var(--accent)/.10)] blur-[100px] pointer-events-none" />
+    <div className="min-h-[100dvh] w-full bg-background relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-24 -left-24 h-[30rem] w-[30rem] rounded-full bg-[hsl(var(--primary)/.10)] blur-3xl" />
+        <div className="absolute -bottom-24 -right-24 h-[28rem] w-[28rem] rounded-full bg-[hsl(var(--accent)/.10)] blur-3xl" />
       </div>
 
-      <div className="relative z-10 flex w-full items-center justify-center px-5 min-h-[100dvh]">
-        {/* Left panel: Convene branding */}
-        <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center p-10 lg:p-16 text-center">
-          <div className="inline-flex flex-col items-center gap-3 mb-8">
-            <img src="/favicon.svg" alt="Convene" className="h-14 w-14 rounded-2xl" />
-            <div>
-              <span className="font-serif text-3xl font-bold tracking-tight text-foreground">Convene</span>
-              <div className="mono-font text-[10px] uppercase tracking-[.25em] text-[hsl(var(--muted-foreground))] mt-1">
-                Conference Management
+      <div className="relative z-10 grid min-h-[100dvh] lg:grid-cols-2">
+        <div className="hidden lg:flex flex-col justify-center px-12 xl:px-20 py-12">
+          <div className="max-w-lg mx-auto w-full">
+            <div className="inline-flex items-center gap-3 mb-10">
+              <img src="/favicon.svg" alt="Convene" className="h-12 w-12 rounded-2xl shadow-sm" />
+              <div>
+                <div className="text-2xl font-bold tracking-tight text-[hsl(var(--foreground))]">Convene</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[.24em] text-[hsl(var(--muted-foreground))]">Conference Management</div>
               </div>
             </div>
-          </div>
 
-          <div className="max-w-md w-full">
-            <h2 className="display-font text-4xl font-bold tracking-tight text-foreground mb-6 leading-tight">
-              Welcome back<span className="text-[hsl(var(--primary))]">.</span>
+            <h2 className="text-2xl xl:text-3xl font-bold tracking-tight text-[hsl(var(--foreground))] leading-tight whitespace-nowrap">
+              Manage conferences with clarity<span className="text-[hsl(var(--primary))]">.</span>
             </h2>
-            <p className="text-[hsl(var(--muted-foreground))] text-lg leading-relaxed mb-10">
-              Sign in to your conference workspace to manage events, sessions, and registrations.
+            <p className="mt-5 text-base text-[hsl(var(--muted-foreground))] leading-relaxed max-w-md">
+              Sign in to coordinate events, sessions, speakers, and registrations from one workspace.
             </p>
 
-            <div className="space-y-6">
-              <div className="text-center">
-                <div className="text-sm font-semibold text-foreground">Fast, secure sign-in</div>
-                <div className="text-xs text-[hsl(var(--muted-foreground))]">Access your dashboard in seconds</div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm font-semibold text-foreground">Role-based access</div>
-                <div className="text-xs text-[hsl(var(--muted-foreground))]">Admin, organiser, speaker, or attendee</div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm font-semibold text-foreground">Everything in one place</div>
-                <div className="text-xs text-[hsl(var(--muted-foreground))]">Venues, sessions, and registrations</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-auto border-t border-[hsl(var(--border))] pt-8 w-full">
-            <div className="flex flex-col items-center gap-2 text-xs text-[hsl(var(--muted-foreground))]">
-              <span className="border border-[hsl(var(--border))] rounded-full px-2 py-0.5">v1.0.0</span>
-              <span>Convene Conference Management System</span>
+            <div className="mt-10 grid gap-4">
+              {[
+                { title: "Organized workflows", desc: "Conferences, venues, sessions, and reports in one place." },
+                { title: "Role-based access", desc: "Admin, organiser, speaker, and attendee experiences." },
+                { title: "Fast coordination", desc: "Track registrations and schedules with confidence." },
+              ].map((item) => (
+                <div key={item.title} className="rounded-xl border border-[hsl(var(--border))] bg-white/60 backdrop-blur px-4 py-3">
+                  <div className="text-sm font-semibold text-[hsl(var(--foreground))]">{item.title}</div>
+                  <div className="text-sm text-[hsl(var(--muted-foreground))]">{item.desc}</div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Right panel: login form card */}
-        <div className="flex flex-col items-center justify-center p-6 lg:w-1/2 lg:p-16 min-h-[560px]">
+        <div className="flex items-center justify-center px-5 py-10 sm:px-8 lg:px-12">
           <div className="w-full max-w-md">
-            <div className="text-center mb-10">
-              <img src="/favicon.svg" alt="Convene" className="h-12 w-12 mx-auto mb-4" />
-              <h1 className="display-font text-3xl font-bold tracking-tight text-foreground mb-2">Welcome back</h1>
-              <p className="text-[hsl(var(--muted-foreground))] text-sm">
-                Enter your email and password to access your conference workspace.
-              </p>
+            <div className="lg:hidden mb-8 text-center">
+              <img src="/favicon.svg" alt="Convene" className="mx-auto mb-4 h-12 w-12 rounded-2xl shadow-sm" />
+              <div className="text-xs font-semibold uppercase tracking-[.24em] text-[hsl(var(--muted-foreground))]">Convene</div>
             </div>
 
-            {error && (
-              <div className="mb-6 rounded-lg border border-[hsl(var(--destructive)/.3)] bg-[hsl(var(--destructive)/.08)] p-4 text-sm text-[hsl(var(--destructive))] shadow-sm">
-                {error}
+            <div className="rounded-2xl border border-[hsl(var(--border))] bg-white/90 backdrop-blur p-6 shadow-sm sm:p-8">
+              <div className="mb-7">
+                <h1 className="text-3xl font-bold tracking-tight text-[hsl(var(--foreground))]">Sign in</h1>
+                <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">
+                  Enter your credentials to access your workspace.
+                </p>
               </div>
-            )}
 
-            <form className="grid gap-5" onSubmit={handleSubmit}>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email address"
-                  required
-                  autoComplete="email"
-                  className="h-11 w-full rounded-xl border border-input bg-background pl-10 pr-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all"
-                  data-testid="input-login-email"
-                />
-              </div>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  required
-                  autoComplete="current-password"
-                  className="h-11 w-full rounded-xl border border-input bg-background pl-10 pr-10 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all"
-                  data-testid="input-login-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-              <Button
-                type="submit"
-                className="h-11 w-full font-semibold"
-                disabled={isLoading}
-                data-testid="button-submit-login"
-              >
-                {isLoading ? "Signing in…" : "Sign in"}
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </form>
+              {error && (
+                <div className="mb-5 rounded-lg border border-[hsl(var(--destructive)/.25)] bg-[hsl(var(--destructive)/.06)] px-4 py-3 text-sm text-[hsl(var(--destructive))]">
+                  {error}
+                </div>
+              )}
 
-            <p className="mt-10 text-center text-sm text-[hsl(var(--muted-foreground))]">
-              Don't have an account?{" "}
-              <Link href="/signup" className="font-bold text-[hsl(var(--primary))] hover:underline" data-testid="link-login-signup">
-                Create an account
-              </Link>
-            </p>
+              <form className="grid gap-4" onSubmit={handleSubmit}>
+                <label className="grid gap-1.5">
+                  <span className="text-sm font-medium text-[hsl(var(--foreground))]">Email</span>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[hsl(var(--muted-foreground))]" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      required
+                      autoComplete="email"
+                      className="h-11 w-full rounded-xl border border-input bg-background pl-10 pr-4 text-sm outline-none transition focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary)/.15)]"
+                      data-testid="input-login-email"
+                    />
+                  </div>
+                </label>
+
+                <label className="grid gap-1.5">
+                  <span className="text-sm font-medium text-[hsl(var(--foreground))]">Password</span>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[hsl(var(--muted-foreground))]" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      required
+                      autoComplete="current-password"
+                      className="h-11 w-full rounded-xl border border-input bg-background pl-10 pr-11 text-sm outline-none transition focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary)/.15)]"
+                      data-testid="input-login-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </label>
+
+                <Button type="submit" className="mt-2 h-11 w-full font-semibold" disabled={isLoading} data-testid="button-submit-login">
+                  {isLoading ? "Signing in…" : "Sign in"}
+                  {!isLoading && <ArrowRight className="h-4 w-4" />}
+                </Button>
+              </form>
+
+              <p className="mt-6 text-center text-sm text-[hsl(var(--muted-foreground))]">
+                Don&apos;t have an account?{" "}
+                <Link href="/signup" className="font-semibold text-[hsl(var(--primary))] hover:underline" data-testid="link-login-signup">
+                  Create account
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </div>

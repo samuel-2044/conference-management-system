@@ -1,4 +1,12 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  type ReactNode,
+} from "react";
 
 type User = {
   id: string;
@@ -22,38 +30,43 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
+function toUser(data: { id: string; name: string; email: string; role: string }): User {
+  return {
+    id: data.id,
+    name: data.name,
+    email: data.email,
+    role: data.role as User["role"],
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    fetchMe();
-  }, []);
 
   const fetchMe = useCallback(async () => {
     try {
       const response = await fetch(`${API_URL}/api/auth/me`, {
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
       });
 
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.data) {
-          setUser({
-            id: data.data.id,
-            name: data.data.name,
-            email: data.data.email,
-            role: data.data.role as User["role"],
-          });
+          setUser(toUser(data.data));
+          return;
         }
       }
+        setUser(null);
     } catch {
-      // User not authenticated
+      // Network failure: keep the current state.
     } finally {
       setIsLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    fetchMe();
+  }, [fetchMe]);
 
   const login = useCallback(async (email: string, password: string) => {
     const response = await fetch(`${API_URL}/api/auth/login`, {
@@ -63,18 +76,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email, password }),
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
 
     if (!response.ok || !data.success) {
       throw new Error(data.message || "Login failed");
     }
 
-    setUser({
-      id: data.data.id,
-      name: data.data.name,
-      email: data.data.email,
-      role: data.data.role as User["role"],
-    });
+    setUser(toUser(data.data));
   }, []);
 
   const signup = useCallback(async (
@@ -90,18 +98,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ name, email, password, role }),
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
 
     if (!response.ok || !data.success) {
       throw new Error(data.message || "Signup failed");
     }
 
-    setUser({
-      id: data.data.id,
-      name: data.data.name,
-      email: data.data.email,
-      role: data.data.role as User["role"],
-    });
+    setUser(toUser(data.data));
   }, []);
 
   const logout = useCallback(async () => {
@@ -109,7 +112,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await fetch(`${API_URL}/api/auth/logout`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
       });
     } catch {
       // Ignore network failures — the local session must still be cleared.
@@ -126,30 +128,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify(data),
     });
 
-    const result = await response.json();
+    const result = await response.json().catch(() => ({}));
 
     if (!response.ok || !result.success) {
       throw new Error(result.message || "Failed to update profile");
     }
 
-    setUser({
-      id: result.data.id,
-      name: result.data.name,
-      email: result.data.email,
-      role: result.data.role as User["role"],
-    });
+    setUser(toUser(result.data));
   }, []);
 
-  const value = {
-    user,
-    isLoading,
-    isAuthenticated: !!user,
-    login,
-    signup,
-    logout,
-    fetchMe,
-    updateProfile,
-  };
+  const value = useMemo(
+    () => ({
+      user,
+      isLoading,
+      isAuthenticated: !!user,
+      login,
+      signup,
+      logout,
+      fetchMe,
+      updateProfile,
+    }),
+    [user, isLoading, login, signup, logout, fetchMe, updateProfile],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

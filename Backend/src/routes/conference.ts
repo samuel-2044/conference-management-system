@@ -92,6 +92,17 @@ function getDb(req: any): D1Database {
   return req.env?.convene_db;
 }
 
+function startOfTodayUtc(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
+function parseDateOnly(value: string | Date): Date {
+  const d = value instanceof Date ? value : new Date(value);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+
+
 function toCamel(obj: any): any {
   if (Array.isArray(obj)) return obj.map(toCamel);
   if (obj !== null && typeof obj === "object") {
@@ -287,6 +298,18 @@ router.get("/conferences", authenticate, async (_req, res) => {
 router.post("/conferences", authenticate, authorize("organiser", "admin"), async (req, res) => {
   const db = getDb(req);
   const body = CreateConferenceBody.parse(req.body);
+
+  const startDate = parseDateOnly(body.startDate as any);
+  const endDate = parseDateOnly(body.endDate as any);
+  if (startDate < startOfTodayUtc()) {
+    res.status(400).json({ success: false, message: "Conference start date cannot be in the past" });
+    return;
+  }
+  if (endDate < startDate) {
+    res.status(400).json({ success: false, message: "Conference end date must be on or after the start date" });
+    return;
+  }
+
   const created = {
     id: id("conf"),
     title: body.title,
@@ -334,12 +357,23 @@ router.post("/conferences", authenticate, authorize("organiser", "admin"), async
 
 router.get("/conferences/available", authenticate, asyncHandler(async (_req, res) => {
   const db = getDb(_req);
-  const now = new Date();
 
-  const conferences = await db.prepare("SELECT * FROM conferences").all();
+  const [conferences, counts] = await Promise.all([
+    db.prepare("SELECT * FROM conferences").all(),
+    db
+      .prepare(
+        "SELECT conference_id, COUNT(*) as count FROM conference_attendees WHERE status != 'cancelled' GROUP BY conference_id",
+      )
+      .all(),
+  ]);
 
-  const result = await Promise.all((conferences.results as any[]).map(async (conference) => {
-    const registeredCount = await getConferenceRegistrationCount(db, conference.id);
+  const countMap = new Map<string, number>();
+  for (const row of (counts.results as any[])) {
+    countMap.set(row.conference_id, Number(row.count) || 0);
+  }
+
+  const result = (conferences.results as any[]).map((conference) => {
+    const registeredCount = countMap.get(conference.id) ?? 0;
     const capacity = conference.capacity ?? null;
     const isFull = capacity !== null && registeredCount >= capacity;
     const status = computeConferenceStatus(conference);
@@ -354,7 +388,7 @@ router.get("/conferences/available", authenticate, asyncHandler(async (_req, res
       isFull,
       registrationOpen,
     });
-  }));
+  });
 
   res.json(ListAvailableConferencesResponse.parse(result));
 }));
@@ -441,12 +475,23 @@ router.patch("/conferences/:conferenceId", authenticate, authorize("organiser", 
   const body = UpdateConferenceBody.parse(req.body);
 
   const existing = await db
-    .prepare("SELECT id FROM conferences WHERE id = ?")
+    .prepare("SELECT * FROM conferences WHERE id = ?")
     .bind(params.conferenceId)
-    .first();
+    .first() as any;
 
   if (!existing) {
     res.status(404).json({ error: "Conference not found" });
+    return;
+  }
+
+  const nextStart = body.startDate !== undefined ? parseDateOnly(body.startDate as any) : parseDateOnly(existing.start_date);
+  const nextEnd = body.endDate !== undefined ? parseDateOnly(body.endDate as any) : parseDateOnly(existing.end_date);
+  if (body.startDate !== undefined && nextStart < startOfTodayUtc()) {
+    res.status(400).json({ success: false, message: "Conference start date cannot be in the past" });
+    return;
+  }
+  if (nextEnd < nextStart) {
+    res.status(400).json({ success: false, message: "Conference end date must be on or after the start date" });
     return;
   }
 
@@ -455,8 +500,8 @@ router.patch("/conferences/:conferenceId", authenticate, authorize("organiser", 
 
   if (body.title !== undefined) { fields.push("title = ?"); values.push(body.title); }
   if (body.description !== undefined) { fields.push("description = ?"); values.push(body.description); }
-  if (body.startDate !== undefined) { fields.push("start_date = ?"); values.push(new Date(body.startDate).toISOString()); }
-  if (body.endDate !== undefined) { fields.push("end_date = ?"); values.push(new Date(body.endDate).toISOString()); }
+  if (body.startDate !== undefined) { fields.push("start_date = ?"); values.push(new Date(body.startDate as any).toISOString()); }
+  if (body.endDate !== undefined) { fields.push("end_date = ?"); values.push(new Date(body.endDate as any).toISOString()); }
 
   if (fields.length > 0) {
     values.push(params.conferenceId);
@@ -570,7 +615,7 @@ router.delete("/venues/:venueId", authenticate, authorize("organiser", "admin"),
 
 // ========== SESSIONS ==========
 
-router.get("/sessions", authenticate, async (req, res) => {
+router.get("/sessions", authenticate, authorize("organiser", "admin"), async (req, res) => {
   const db = getDb(req);
   const query = ListSessionsQueryParams.parse(req.query);
   let sql = "SELECT * FROM sessions";
@@ -698,7 +743,7 @@ router.delete("/sessions/:sessionId", authenticate, authorize("organiser", "admi
 
 // ========== SPEAKERS ==========
 
-router.get("/speakers", authenticate, async (req, res) => {
+router.get("/speakers", authenticate, authorize("organiser", "admin"), async (req, res) => {
   const db = getDb(req);
   const query = ListSpeakersQueryParams.parse(req.query);
 
@@ -832,12 +877,13 @@ router.delete("/speakers/:speakerId", authenticate, authorize("organiser", "admi
 
 // ========== ATTENDEES ==========
 
-router.get("/attendees", authenticate, async (req, res) => {
+router.get("/attendees", authenticate, authorize("organiser", "admin"), async (req, res) => {
   const db = getDb(req);
   const query = ListAttendeesQueryParams.parse(req.query);
 
   let sql = `
-    SELECT ca.*, u.name, u.email, c.title as conference_title FROM conference_attendees ca
+    SELECT ca.*, u.name as user_name, u.email as user_email, u.phone as user_phone, c.title as conference_title
+    FROM conference_attendees ca
     INNER JOIN users u ON u.id = ca.attendee_id
     INNER JOIN conferences c ON c.id = ca.conference_id
   `;
@@ -850,21 +896,25 @@ router.get("/attendees", authenticate, async (req, res) => {
   }
 
   if (query.search) {
-    conditions.push("(u.name LIKE ? OR u.email LIKE ?)");
+    conditions.push("(COALESCE(ca.full_name, u.name) LIKE ? OR COALESCE(ca.email, u.email) LIKE ? OR COALESCE(ca.phone, u.phone, '') LIKE ?)");
     const search = `%${query.search.toLowerCase()}%`;
-    values.push(search, search);
+    values.push(search, search, search);
   }
 
   if (conditions.length > 0) {
     sql += ` WHERE ${conditions.join(" AND ")}`;
   }
+  sql += " ORDER BY ca.registration_date DESC";
 
   const result = await db.prepare(sql).bind(...values).all();
   res.json(ListAttendeesResponse.parse(toCamel((result.results as any[]).map((ca: any) => ({
     id: ca.id,
     user_id: ca.attendee_id,
-    name: ca.name ?? "Unknown",
-    email: ca.email ?? "",
+    name: ca.full_name ?? ca.user_name ?? "Unknown",
+    email: ca.email ?? ca.user_email ?? "",
+    phone: ca.phone ?? ca.user_phone ?? null,
+    organization: ca.organization ?? null,
+    special_requirements: ca.special_requirements ?? null,
     conference_id: ca.conference_id,
     conference_title: ca.conference_title ?? "Unknown",
     registration_date: ca.registration_date,
@@ -959,8 +1009,22 @@ router.post("/conferences/:conferenceId/register", authenticate, async (req, res
     return;
   }
 
-  // conference_attendees.attendee_id references attendees(id), so make sure an
-  // attendees row exists for this user before inserting the registration.
+  const user = await db
+    .prepare("SELECT id, name, email, phone FROM users WHERE id = ?")
+    .bind(userId)
+    .first<any>();
+
+  const fullName = (body.fullName ?? user?.name ?? "").trim();
+  const email = (body.email ?? user?.email ?? "").trim().toLowerCase();
+  const phone = (body.phone ?? user?.phone ?? "").trim();
+  const organization = (body.organization ?? "").trim();
+  const specialRequirements = (body.specialRequirements ?? "").trim();
+
+  if (!fullName || !email || !phone) {
+    res.status(400).json({ error: "Full name, email, and phone number are required" });
+    return;
+  }
+
   await db
     .prepare(
       "INSERT OR IGNORE INTO attendees (id, user_id, created_at) VALUES (?, ?, ?)",
@@ -968,18 +1032,32 @@ router.post("/conferences/:conferenceId/register", authenticate, async (req, res
     .bind(userId, userId, new Date().toISOString())
     .run();
 
+  // Keep user contact details in sync for convenience
+  await db
+    .prepare("UPDATE users SET name = ?, email = COALESCE(NULLIF(?, ''), email), phone = ? WHERE id = ?")
+    .bind(fullName, email, phone || null, userId)
+    .run()
+    .catch(() => {});
+
   const registrationId = id("cr");
+  const registrationDate = new Date().toISOString();
   await db
     .prepare(
-      `INSERT INTO conference_attendees (id, attendee_id, conference_id, registration_date, status)
-       VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO conference_attendees
+        (id, attendee_id, conference_id, registration_date, status, full_name, email, phone, organization, special_requirements)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       registrationId,
       userId,
       body.conferenceId,
-      new Date().toISOString(),
+      registrationDate,
       "confirmed",
+      fullName,
+      email,
+      phone,
+      organization || null,
+      specialRequirements || null,
     )
     .run();
 
@@ -987,9 +1065,53 @@ router.post("/conferences/:conferenceId/register", authenticate, async (req, res
     id: registrationId,
     attendeeId: userId,
     conferenceId: body.conferenceId,
-    registrationDate: new Date().toISOString(),
+    registrationDate,
     status: "confirmed",
+    fullName,
+    email,
+    phone,
+    organization: organization || null,
+    specialRequirements: specialRequirements || null,
   });
+});
+
+router.get("/conferences/registrations/me", authenticate, async (req, res) => {
+  const db = getDb(req);
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const rows = await db
+    .prepare(`
+      SELECT ca.*, c.title as conference_title, c.start_date, c.end_date, c.status as conference_status,
+             u.name as user_name, u.email as user_email, u.phone as user_phone
+      FROM conference_attendees ca
+      INNER JOIN conferences c ON c.id = ca.conference_id
+      INNER JOIN users u ON u.id = ca.attendee_id
+      WHERE ca.attendee_id = ?
+      ORDER BY ca.registration_date DESC
+    `)
+    .bind(userId)
+    .all();
+
+  res.json((rows.results as any[]).map((cr: any) => ({
+    id: cr.id,
+    attendeeId: cr.attendee_id,
+    conferenceId: cr.conference_id,
+    conferenceTitle: cr.conference_title ?? "Unknown",
+    conferenceStartDate: cr.start_date ?? null,
+    conferenceEndDate: cr.end_date ?? null,
+    conferenceStatus: cr.conference_status ?? null,
+    registrationDate: cr.registration_date,
+    status: cr.status,
+    fullName: cr.full_name ?? cr.user_name ?? "",
+    email: cr.email ?? cr.user_email ?? "",
+    phone: cr.phone ?? cr.user_phone ?? "",
+    organization: cr.organization ?? null,
+    specialRequirements: cr.special_requirements ?? null,
+  })));
 });
 
 router.get("/conferences/:conferenceId/registrations", authenticate, authorize("organiser", "admin"), async (req, res) => {
@@ -998,9 +1120,11 @@ router.get("/conferences/:conferenceId/registrations", authenticate, authorize("
 
   const registrations = await db
     .prepare(`
-      SELECT ca.*, u.name, u.email FROM conference_attendees ca
+      SELECT ca.*, u.name as user_name, u.email as user_email, u.phone as user_phone
+      FROM conference_attendees ca
       INNER JOIN users u ON u.id = ca.attendee_id
-      WHERE ca.conference_id = ? AND ca.status != 'cancelled'
+      WHERE ca.conference_id = ?
+      ORDER BY ca.registration_date DESC
     `)
     .bind(conferenceId)
     .all();
@@ -1008,17 +1132,20 @@ router.get("/conferences/:conferenceId/registrations", authenticate, authorize("
   res.json(ListConferenceRegistrationsResponse.parse((registrations.results as any[]).map((cr: any) => ({
     id: cr.id,
     attendeeId: cr.attendee_id,
-    name: cr.name ?? "Unknown",
-    email: cr.email ?? "",
     conferenceId: cr.conference_id,
     registrationDate: cr.registration_date,
     status: cr.status,
+    fullName: cr.full_name ?? cr.user_name ?? "Unknown",
+    email: cr.email ?? cr.user_email ?? "",
+    phone: cr.phone ?? cr.user_phone ?? null,
+    organization: cr.organization ?? null,
+    specialRequirements: cr.special_requirements ?? null,
   }))));
 });
-
 router.delete("/conferences/:conferenceId/cancel", authenticate, async (req, res) => {
   const db = getDb(req);
   const userId = req.user?.id;
+  const { conferenceId } = req.params;
 
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
@@ -1027,15 +1154,25 @@ router.delete("/conferences/:conferenceId/cancel", authenticate, async (req, res
 
   const result = await db
     .prepare(
-      "UPDATE conference_attendees SET status = 'cancelled' WHERE attendee_id = ? AND conference_id = ? AND status != 'cancelled'",
+      "DELETE FROM conference_attendees WHERE attendee_id = ? AND conference_id = ?",
     )
-    .bind(userId, req.params.conferenceId)
+    .bind(userId, conferenceId)
     .run();
 
   if (result.changes === 0) {
     res.status(404).json({ error: "Registration not found" });
     return;
   }
+
+  // Sessions belong to the conference; remove this attendee's session registrations for it
+  await db
+    .prepare(
+      `DELETE FROM attendee_sessions
+       WHERE attendee_id = ?
+         AND session_id IN (SELECT id FROM sessions WHERE conference_id = ?)`,
+    )
+    .bind(userId, conferenceId)
+    .run();
 
   res.status(204).send();
 });
@@ -1044,26 +1181,35 @@ router.delete("/conferences/:conferenceId/cancel", authenticate, async (req, res
 
 router.get("/sessions/available", authenticate, asyncHandler(async (_req, res) => {
   const db = getDb(_req);
-  const now = new Date();
 
-  const sessions = await db.prepare("SELECT * FROM sessions").all();
+  const [sessions, conferences, venues, counts] = await Promise.all([
+    db.prepare("SELECT * FROM sessions").all(),
+    db.prepare("SELECT id, title, start_date, end_date, status FROM conferences").all(),
+    db.prepare("SELECT id, name FROM venues").all(),
+    db
+      .prepare(
+        "SELECT session_id, COUNT(*) as count FROM attendee_sessions WHERE status != 'cancelled' GROUP BY session_id",
+      )
+      .all(),
+  ]);
 
-  const result = await Promise.all((sessions.results as any[]).map(async (session) => {
-    const conference = await db
-      .prepare("SELECT * FROM conferences WHERE id = ?")
-      .bind(session.conference_id)
-      .first();
+  const confMap = new Map<string, any>();
+  for (const c of (conferences.results as any[])) confMap.set(c.id, c);
+  const venueMap = new Map<string, any>();
+  for (const v of (venues.results as any[])) venueMap.set(v.id, v);
+  const countMap = new Map<string, number>();
+  for (const row of (counts.results as any[])) countMap.set(row.session_id, Number(row.count) || 0);
 
-    const venue = session.venue_id
-      ? await db.prepare("SELECT * FROM venues WHERE id = ?").bind(session.venue_id).first()
-      : null;
-
-    const registeredCount = await getSessionRegistrationCount(db, session.id);
+  const result = (sessions.results as any[]).map((session) => {
+    const conference = confMap.get(session.conference_id);
+    const venue = session.venue_id ? venueMap.get(session.venue_id) : null;
+    const registeredCount = countMap.get(session.id) ?? 0;
     const capacity = session.capacity ?? null;
     const isFull = capacity !== null && registeredCount >= capacity;
     const sessionStatus = computeSessionStatus(session);
     const conferenceStatus = conference ? computeConferenceStatus(conference) : "draft";
-    const registrationOpen = sessionStatus === "upcoming" && (conferenceStatus === "upcoming" || conferenceStatus === "ongoing");
+    const registrationOpen =
+      sessionStatus === "upcoming" && (conferenceStatus === "upcoming" || conferenceStatus === "ongoing");
 
     return SessionAvailability.parse({
       sessionId: session.id,
@@ -1080,7 +1226,7 @@ router.get("/sessions/available", authenticate, asyncHandler(async (_req, res) =
       isFull,
       registrationOpen,
     });
-  }));
+  });
 
   res.json(ListAvailableSessionsResponse.parse(result));
 }));
@@ -1122,6 +1268,19 @@ router.post("/sessions/:sessionId/register", authenticate, async (req, res) => {
     return;
   }
 
+  // Sessions belong to a conference: attendee must be registered for the conference first
+  const conferenceRegistration = await db
+    .prepare(
+      "SELECT id FROM conference_attendees WHERE attendee_id = ? AND conference_id = ? AND status != 'cancelled'",
+    )
+    .bind(userId, session.conference_id)
+    .first();
+
+  if (!conferenceRegistration) {
+    res.status(400).json({ error: "Register for the conference before registering for its sessions" });
+    return;
+  }
+
   const existing = await db
     .prepare(
       "SELECT id FROM attendee_sessions WHERE attendee_id = ? AND session_id = ? AND status != 'cancelled'",
@@ -1141,8 +1300,8 @@ router.post("/sessions/:sessionId/register", authenticate, async (req, res) => {
     return;
   }
 
-  const hasConflict = await isAttendeeAvailableForSession(db, userId, session.start_time, session.end_time);
-  if (!hasConflict) {
+  const isAvailable = await isAttendeeAvailableForSession(db, userId, session.start_time, session.end_time);
+  if (!isAvailable) {
     res.status(400).json({ error: "You have a scheduling conflict with another registered session" });
     return;
   }
@@ -1220,7 +1379,7 @@ router.delete("/sessions/:sessionId/cancel", authenticate, async (req, res) => {
 
   const result = await db
     .prepare(
-      "UPDATE attendee_sessions SET status = 'cancelled' WHERE attendee_id = ? AND session_id = ? AND status != 'cancelled'",
+      "DELETE FROM attendee_sessions WHERE attendee_id = ? AND session_id = ?",
     )
     .bind(userId, req.params.sessionId)
     .run();
@@ -1289,6 +1448,115 @@ router.delete("/session-speakers/:sessionSpeakerId", authenticate, authorize("or
   const params = RemoveSessionSpeakerParams.parse(req.params);
   await db.prepare("DELETE FROM session_speakers WHERE id = ?").bind(params.sessionSpeakerId).run();
   res.status(204).send();
+});
+
+router.get("/sessions/:sessionId/speakers", authenticate, async (req, res) => {
+  const db = getDb(req);
+  const sessionId = req.params.sessionId;
+  const rows = await db
+    .prepare(`
+      SELECT ss.id, ss.session_id, ss.speaker_id, ss.speaker_role, ss.created_at,
+             u.name as speaker_name, u.email as speaker_email
+      FROM session_speakers ss
+      INNER JOIN speakers sp ON sp.id = ss.speaker_id
+      INNER JOIN users u ON u.id = sp.user_id
+      WHERE ss.session_id = ?
+      ORDER BY ss.created_at ASC
+    `)
+    .bind(sessionId)
+    .all();
+  res.json((rows.results as any[]).map((r: any) => ({
+    id: r.id,
+    sessionId: r.session_id,
+    speakerId: r.speaker_id,
+    speakerRole: r.speaker_role,
+    createdAt: r.created_at,
+    speakerName: r.speaker_name ?? "Unknown",
+    speakerEmail: r.speaker_email ?? "",
+  })));
+});
+
+router.get("/speakers/me/sessions", authenticate, authorize("speaker"), async (req, res) => {
+  const db = getDb(req);
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const speaker = await db
+    .prepare("SELECT id FROM speakers WHERE user_id = ?")
+    .bind(userId)
+    .first<any>();
+
+  if (!speaker) {
+    res.json([]);
+    return;
+  }
+
+  const result = await db
+    .prepare(`
+      SELECT
+        s.*,
+        c.title as conference_title,
+        c.start_date as conference_start_date,
+        c.end_date as conference_end_date,
+        c.status as conference_status,
+        v.name as venue_name,
+        ss.speaker_role
+      FROM session_speakers ss
+      INNER JOIN sessions s ON s.id = ss.session_id
+      INNER JOIN conferences c ON c.id = s.conference_id
+      LEFT JOIN venues v ON v.id = s.venue_id
+      WHERE ss.speaker_id = ?
+      ORDER BY s.start_time ASC
+    `)
+    .bind(speaker.id)
+    .all();
+
+  res.json((result.results as any[]).map((row: any) => ({
+    id: row.id,
+    conferenceId: row.conference_id,
+    conferenceTitle: row.conference_title ?? "Unknown",
+    conferenceStatus: row.conference_status ?? null,
+    venueId: row.venue_id ?? null,
+    venueName: row.venue_name ?? null,
+    title: row.title,
+    description: row.description ?? "",
+    startTime: row.start_time,
+    endTime: row.end_time,
+    speakerRole: row.speaker_role ?? "speaker",
+  })));
+});
+
+router.get("/speakers/me", authenticate, authorize("speaker"), async (req, res) => {
+  const db = getDb(req);
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const row = await db
+    .prepare(`
+      SELECT s.*, u.name, u.email
+      FROM speakers s
+      INNER JOIN users u ON u.id = s.user_id
+      WHERE s.user_id = ?
+    `)
+    .bind(userId)
+    .first<any>();
+  if (!row) {
+    res.status(404).json({ error: "Speaker profile not found" });
+    return;
+  }
+  res.json({
+    id: row.id,
+    userId: row.user_id,
+    name: row.name ?? "",
+    email: row.email ?? "",
+    bio: row.bio ?? "",
+    photoUrl: row.photo_url ?? null,
+  });
 });
 
 // ========== DOCUMENTS ==========

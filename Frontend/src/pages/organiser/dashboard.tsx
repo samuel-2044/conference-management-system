@@ -17,10 +17,10 @@ export function OrganiserDashboard() {
     .slice(0, 4);
 
   const stats = [
-    { label: "My conferences", value: conferences?.length ?? 0, icon: CalendarDays },
-    { label: "My sessions", value: sessions?.length ?? 0, icon: Clock3 },
+    { label: "Conferences", value: conferences?.length ?? 0, icon: CalendarDays },
+    { label: "Sessions", value: sessions?.length ?? 0, icon: Clock3 },
     { label: "Total speakers", value: speakers?.length ?? 0, icon: UsersRound },
-    { label: "Registrations", value: report?.totalRegistrations ?? 0, icon: CheckCircle2 },
+    { label: "Registrations", value: report?.total ?? 0, icon: CheckCircle2 },
   ];
 
   return (
@@ -75,9 +75,9 @@ export function OrganiserDashboard() {
 
         <div className="rounded-xl border border-border bg-card p-6">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-bold">My conferences</h2>
+            <h2 className="text-lg font-bold">Conferences</h2>
             <Link href="/conferences" className="text-xs font-semibold text-[hsl(var(--primary))] hover:underline flex items-center gap-1">
-              View all <ArrowRight className="h-3 w-3" />
+              Manage all <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
           {myConferences.length > 0 ? (

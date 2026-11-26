@@ -12,6 +12,7 @@ import {
   BarChart3,
   LogOut,
   Settings2,
+  ShieldCheck,
   Plus,
   ChevronRight,
   Menu,
@@ -29,24 +30,27 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "organiser", "speaker", "attendee"] },
-  { href: "/conferences", label: "Conferences", icon: CalendarDays, roles: ["admin", "organiser", "speaker", "attendee"] },
+  // Management (admin/organiser)
+  { href: "/conferences", label: "Conferences", icon: CalendarDays, roles: ["admin", "organiser"] },
   { href: "/speakers", label: "Speakers", icon: UserRound, roles: ["admin", "organiser"] },
   { href: "/attendees", label: "Attendees", icon: UsersRound, roles: ["admin", "organiser"] },
+  { href: "/organisers", label: "Organisers", icon: ShieldCheck, roles: ["admin"] },
   { href: "/venues", label: "Venues", icon: Building2, roles: ["admin", "organiser"] },
-  { href: "/schedule", label: "Schedule", icon: Clock3, roles: ["admin", "organiser", "speaker", "attendee"] },
-  { href: "/documents", label: "Documents", icon: Library, roles: ["admin", "organiser", "speaker"] },
+  { href: "/schedule", label: "Schedule", icon: Clock3, roles: ["admin", "organiser"] },
+  { href: "/documents", label: "Documents", icon: Library, roles: ["admin", "organiser", "speaker", "attendee"] },
   { href: "/reports", label: "Reports", icon: BarChart3, roles: ["admin", "organiser"] },
+  // Participant
+  { href: "/conferences", label: "Conferences", icon: CalendarDays, roles: ["attendee"] },
+  { href: "/conferences", label: "Browse conferences", icon: CalendarDays, roles: ["speaker"] },
+  { href: "/my-registrations", label: "My registrations", icon: UsersRound, roles: ["attendee"] },
+  { href: "/schedule", label: "Sessions", icon: Clock3, roles: ["attendee"] },
+  { href: "/schedule", label: "My schedule", icon: Clock3, roles: ["speaker"] },
   { href: "/profile", label: "Profile", icon: UserRound, roles: ["admin", "organiser", "speaker", "attendee"] },
-  { href: "/settings", label: "Settings", icon: Settings2, roles: ["admin", "organiser"] },
+  { href: "/settings", label: "Settings", icon: Settings2, roles: ["admin"] },
 ];
 
-// Primary items for mobile bottom bar (visible to all roles)
-const MOBILE_BOTTOM_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/conferences", label: "Conferences", icon: CalendarDays },
-  { href: "/schedule", label: "Schedule", icon: Clock3 },
-  { href: "/profile", label: "Profile", icon: UserRound },
-];
+// Primary items for mobile bottom bar (resolved per role below)
+const MOBILE_BOTTOM_HREFS = ["/dashboard", "/conferences", "/schedule", "/profile"];
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, logout, isAuthenticated } = useAuth();
@@ -58,10 +62,12 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
     [user],
   );
 
-  const bottomNavItems = useMemo(
-    () => MOBILE_BOTTOM_ITEMS.filter((item) => !user || NAV_ITEMS.find((n) => n.href === item.href && n.roles.includes(user.role))),
-    [user],
-  );
+  const bottomNavItems = useMemo(() => {
+    if (!user) return [] as NavItem[];
+    return MOBILE_BOTTOM_HREFS
+      .map((href) => NAV_ITEMS.find((n) => n.href === href && n.roles.includes(user.role)))
+      .filter((n): n is NavItem => Boolean(n));
+  }, [user]);
 
   if (!isAuthenticated || !user) {
     return null;
@@ -81,7 +87,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           "md:relative md:translate-x-0",
         )}
       >
-        <div className="flex items-center gap-3 px-3 mb-10">
+        <div className="flex items-center gap-3 px-3 mb-8">
           <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg">
             <img src="/favicon.svg" alt="Convene" className="h-9 w-9" />
           </div>
@@ -101,7 +107,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           </button>
         </div>
 
-        <div className="mt-10 px-3 text-[10px] font-bold uppercase tracking-[.2em] text-[hsl(var(--sidebar-foreground)/.42)]">
+        <div className="px-3 text-[10px] font-bold uppercase tracking-[.2em] text-[hsl(var(--sidebar-foreground)/.65)]">
           Navigation
         </div>
         <nav className="mt-3 grid gap-1 px-2">
@@ -116,9 +122,9 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 data-testid={`link-${item.label.toLowerCase()}`}
                 className={cn(
                   "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                  "text-[hsl(var(--sidebar-foreground)/.65)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))]",
+                  "text-[hsl(var(--sidebar-foreground)/.82)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-white",
                   isActive
-                    ? "bg-[hsl(var(--sidebar-primary))] font-bold text-[hsl(var(--sidebar-primary-foreground))] shadow-sm"
+                    ? "bg-[hsl(var(--sidebar-primary))] font-semibold text-white shadow-sm"
                     : "",
                 )}
               >
@@ -129,32 +135,32 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           })}
         </nav>
 
-        <div className="mt-auto pt-6 border-t border-[hsl(var(--sidebar-border))]">
-          <div className="px-3 mb-4">
-            <div className="text-[10px] font-bold uppercase tracking-[.2em] text-[hsl(var(--sidebar-foreground)/.42)] mb-2">
-              Account
+        <div className="mt-4 px-2 pt-4 border-t border-[hsl(var(--sidebar-border))]">
+          <div className="px-1 text-[10px] font-bold uppercase tracking-[.2em] text-[hsl(var(--sidebar-foreground)/.65)] mb-2">
+            Account
+          </div>
+          <div className="flex items-center gap-3 rounded-lg border border-[hsl(var(--sidebar-border))] px-3 py-2">
+            <div className="h-8 w-8 shrink-0 rounded-full bg-white/15 flex items-center justify-center text-white font-bold text-xs ring-1 ring-white/20">
+              {user.name.split(" ").map((n) => n[0]).join("").toUpperCase()}
             </div>
-            <div className="flex items-center gap-3 rounded-lg border border-[hsl(var(--sidebar-border))] px-3 py-2">
-              <div className="h-8 w-8 rounded-full bg-[hsl(var(--accent)/.24)] flex items-center justify-center text-[hsl(var(--primary))] font-bold text-xs">
-                {user.name.split(" ").map((n) => n[0]).join("").toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="block truncate text-sm font-semibold">{user.name}</div>
-                <div className="block text-[11px] text-[hsl(var(--sidebar-foreground)/.5)]">
-                  {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                </div>
+            <div className="min-w-0 flex-1">
+              <div className="block truncate text-sm font-semibold text-white">{user.name}</div>
+              <div className="block text-[11px] text-[hsl(var(--sidebar-foreground)/.72)]">
+                {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
               </div>
             </div>
           </div>
           <Button
             onClick={handleLogout}
             variant="ghost"
-            className="w-full h-10 text-[hsl(var(--sidebar-foreground)/.65)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))] flex items-center justify-center gap-2"
+            className="mt-2 w-full h-9 text-[hsl(var(--sidebar-foreground)/.82)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-white flex items-center justify-center gap-2"
             data-testid="button-logout"
           >
             <LogOut className="h-4 w-4" /> Logout
           </Button>
         </div>
+
+
       </aside>
 
       {mobileOpen && (
@@ -209,19 +215,19 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             >
               <span className="sr-only">{mobileOpen ? "Close navigation" : "Open navigation"}</span>
               {mobileOpen ? (
-                <X className="h-5 w-5 text-[hsl(var(--foreground))]" />
+                <X className="h-5 w-5 text-[hsl(var(--sidebar-foreground))]" />
               ) : (
-                <Menu className="h-5 w-5 text-[hsl(var(--foreground))]" />
+                <Menu className="h-5 w-5 text-[hsl(var(--sidebar-foreground))]" />
               )}
             </button>
-            <div className="mono-font hidden items-center gap-2 text-[12px] uppercase tracking-[.18em] text-muted-foreground md:flex">
+            <div className="hidden items-center gap-2 text-sm font-semibold tracking-wide text-[hsl(var(--sidebar-foreground))] md:flex">
               <img src="/favicon.svg" alt="" className="h-5 w-5 rounded" />
               <span>Convene Management</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Link href="/profile" className="ml-1" data-testid="link-header-profile">
-              <div className="h-8 w-8 rounded-full bg-[hsl(var(--accent)/.24)] flex items-center justify-center text-[hsl(var(--primary))] font-bold text-xs">
+              <div className="h-8 w-8 rounded-full bg-white/15 flex items-center justify-center text-white font-bold text-xs ring-1 ring-white/20">
                 {user.name.split(" ").map((n) => n[0]).join("").toUpperCase()}
               </div>
             </Link>
