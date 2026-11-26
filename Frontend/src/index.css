@@ -378,7 +378,7 @@
 }
 
 @layer base {
-  html { scroll-behavior: smooth; font-size: 1rem; }
+  html { scroll-behavior: smooth; font-size: 1.125rem; }
   body { min-width: 320px; }
   button, a, input, select, textarea { transition: color .18s ease, background-color .18s ease, border-color .18s ease, transform .18s ease, opacity .18s ease; }
   ::selection { background: hsl(var(--accent) / .35); }
