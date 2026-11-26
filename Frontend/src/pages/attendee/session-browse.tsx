@@ -66,7 +66,7 @@ export function SessionBrowsePage() {
       {!query.isLoading && (
         <div className="grid gap-4" data-testid="session-grid">
           {sessions.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border bg-card p-12 text-center">
+            <div className="rounded-xl border border-dashed border-border bg-card p-12 text-center" data-testid="session-empty">
               <Clock3 className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
               <h3 className="font-semibold">No sessions available</h3>
               <p className="mt-1 text-sm text-muted-foreground">
