@@ -87,7 +87,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           "md:relative md:translate-x-0",
         )}
       >
-        <div className="flex items-center gap-3 px-3 mb-8">
+        <div className="flex items-center gap-3 px-3 mb-10">
           <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg">
             <img src="/favicon.svg" alt="Convene" className="h-9 w-9" />
           </div>
