@@ -502,8 +502,10 @@ router.patch("/conferences/:conferenceId", authenticate, authorize("organiser", 
 
   if (body.title !== undefined) { fields.push("title = ?"); values.push(body.title); }
   if (body.description !== undefined) { fields.push("description = ?"); values.push(body.description); }
-  if (body.startDate !== undefined) { fields.push("start_date = ?"); values.push(new Date(body.startDate as any).toISOString()); }
-  if (body.endDate !== undefined) { fields.push("end_date = ?"); values.push(new Date(body.endDate as any).toISOString()); }
+  if (body.startDate !== undefined) { fields.push("start_date = ?"); values.push(nextStart.toISOString()); }
+  if (body.endDate !== undefined) { fields.push("end_date = ?"); values.push(nextEnd.toISOString()); }
+  if (body.capacity !== undefined) { fields.push("capacity = ?"); values.push(body.capacity); }
+  if (body.status !== undefined) { fields.push("status = ?"); values.push(body.status); }
 
   if (fields.length > 0) {
     values.push(params.conferenceId);
@@ -1605,7 +1607,7 @@ router.get("/documents", authenticate, async (req, res) => {
 router.get("/reports/registration", authenticate, authorize("organiser", "admin"), async (_req, res) => {
   const db = getDb(_req);
 
-  const totalResult = await db.prepare("SELECT COUNT(*) as count FROM conference_attendees").first();
+  const totalResult = await db.prepare("SELECT COUNT(*) as count FROM conference_attendees WHERE status != 'cancelled'").first();
   const confirmedResult = await db.prepare("SELECT COUNT(*) as count FROM conference_attendees WHERE status = 'confirmed'").first();
   const pendingResult = await db.prepare("SELECT COUNT(*) as count FROM conference_attendees WHERE status = 'pending'").first();
   const cancelledResult = await db.prepare("SELECT COUNT(*) as count FROM conference_attendees WHERE status = 'cancelled'").first();
@@ -1613,7 +1615,7 @@ router.get("/reports/registration", authenticate, authorize("organiser", "admin"
   const conferences = await db.prepare("SELECT * FROM conferences").all();
   const byConference = await Promise.all((conferences.results as any[]).map(async (c: any) => {
     const count = await db
-      .prepare("SELECT COUNT(*) as count FROM conference_attendees WHERE conference_id = ?")
+      .prepare("SELECT COUNT(*) as count FROM conference_attendees WHERE conference_id = ? AND status != 'cancelled'")
       .bind(c.id)
       .first();
     return {

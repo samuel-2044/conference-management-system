@@ -1664,15 +1664,14 @@ function UploadModal({ onClose, allowedTypes }: { onClose: () => void; allowedTy
               data-testid="input-upload-document"
             />
           </label>
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            File storage upload is not configured in this environment. Document metadata upload can be added once storage is enabled.
+          </div>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={onClose} testId="button-cancel-upload">
               Cancel
             </Button>
-            <Button
-              disabled={!file}
-              onClick={() => setUploaded(true)}
-              testId="button-confirm-upload"
-            >
+            <Button disabled testId="button-confirm-upload">
               Upload
             </Button>
           </div>

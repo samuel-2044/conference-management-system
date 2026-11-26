@@ -181,7 +181,9 @@ export const UpdateConferenceBody = zod.object({
   "title": zod.string().min(1).optional(),
   "description": zod.string().optional(),
   "startDate": zod.coerce.date().optional(),
-  "endDate": zod.coerce.date().optional()
+  "endDate": zod.coerce.date().optional(),
+  "capacity": zod.number().optional(),
+  "status": zod.string().optional()
 })
 
 export const UpdateConferenceParams = zod.object({
