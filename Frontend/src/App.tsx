@@ -1766,6 +1766,140 @@ function Profile() {
   );
 }
 
+function Organisers() {
+  const [search, setSearch] = useState("");
+  const [editing, setEditing] = useState<any | null>(null);
+  const [form, setForm] = useState({ name: "", email: "", status: "active" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [rows, setRows] = useState<any[]>([]);
+  const [busy, setBusy] = useState(false);
+  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const q = search ? `?search=${encodeURIComponent(search)}` : "";
+      const res = await fetch(`${apiUrl}/api/auth/organisers${q}`, { credentials: "include" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.message || "Failed to load organisers");
+      setRows(Array.isArray(json.data) ? json.data : []);
+    } catch (e: any) {
+      setError(e?.message || "Failed to load organisers");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, [search]);
+
+  const startEdit = (o: any) => {
+    setEditing(o);
+    setForm({ name: o.name || "", email: o.email || "", status: o.status || "active" });
+  };
+
+  const save = async () => {
+    if (!editing) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`${apiUrl}/api/auth/organisers/${editing.id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.message || "Failed to update organiser");
+      toast.success("Organiser updated");
+      setEditing(null);
+      await load();
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to update organiser");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <PageFrame>
+      <PageHeader
+        eyebrow="Administration"
+        title="Organisers"
+        body="View and manage organiser accounts. Only administrators can access this screen."
+      />
+      <div className="mb-5 flex flex-col gap-3 md:flex-row">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search organisers by name or email"
+            className="h-10 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-sm outline-none focus:border-primary"
+            data-testid="input-search-organisers"
+          />
+        </div>
+      </div>
+
+      {error ? (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">{error}</div>
+      ) : null}
+
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        {loading ? (
+          <div className="p-6 text-sm text-muted-foreground">Loading organisers…</div>
+        ) : rows.length === 0 ? (
+          <div className="p-6 text-sm text-muted-foreground">No organisers found.</div>
+        ) : (
+          rows.map((o) => (
+            <div key={o.id} className="grid gap-2 border-b border-border px-5 py-4 last:border-0 md:grid-cols-[1.5fr_1.5fr_auto_auto] md:items-center md:gap-4" data-testid={`row-organiser-${o.id}`}>
+              <div className="flex items-center gap-3">
+                <Avatar name={o.name} />
+                <div>
+                  <div className="font-semibold">{o.name}</div>
+                  <div className="text-xs text-muted-foreground capitalize">{o.role}</div>
+                </div>
+              </div>
+              <div className="text-sm text-muted-foreground">{o.email}</div>
+              <StatusBadge status={o.status} />
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={() => startEdit(o)} data-testid={`button-edit-organiser-${o.id}`}>
+                  <Pencil className="h-3.5 w-3.5" /> Edit
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {editing ? (
+        <Modal title="Edit organiser" onClose={() => !busy && setEditing(null)}>
+          <div className="grid gap-4">
+            <Field label="Name" value={form.name} onChange={(v) => setForm((f) => ({ ...f, name: v }))} required testId="input-organiser-name" />
+            <Field label="Email" type="email" value={form.email} onChange={(v) => setForm((f) => ({ ...f, email: v }))} required testId="input-organiser-email" />
+            <label className="grid gap-2 text-sm font-medium">
+              Status
+              <select
+                className="h-10 rounded-lg border border-input bg-card px-3 text-sm"
+                value={form.status}
+                onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+                data-testid="select-organiser-status"
+              >
+                <option value="active">active</option>
+                <option value="inactive">inactive</option>
+              </select>
+            </label>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setEditing(null)} disabled={busy}>Cancel</Button>
+              <Button onClick={save} disabled={busy} data-testid="button-save-organiser">{busy ? "Saving…" : "Save changes"}</Button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+    </PageFrame>
+  );
+}
+
 function Settings() {
   const { user } = useAuth();
   const [saved, setSaved] = useState(false);
@@ -1780,12 +1914,12 @@ function Settings() {
   const [allowSelfSignup, setAllowSelfSignup] = useState(true);
   const [maxCapacity, setMaxCapacity] = useState("500");
 
-  if (user?.role !== "admin" && user?.role !== "organiser") {
+  if (user?.role !== "admin") {
     return (
       <PageFrame>
         <PageHeader eyebrow="Settings" title="Settings" />
         <div className="rounded-xl border border-dashed border-border bg-card px-6 py-14 text-center">
-          <h3 className="font-semibold">Settings are only available to administrators and organisers.</h3>
+          <h3 className="font-semibold">Settings are only available to administrators.</h3>
         </div>
       </PageFrame>
     );
@@ -2190,6 +2324,9 @@ function Router() {
           <Route path="/attendees">
             <RoleRoute allow={["admin", "organiser"]}>{() => <Attendees />}</RoleRoute>
           </Route>
+          <Route path="/organisers">
+            <RoleRoute allow={["admin"]}>{() => <Organisers />}</RoleRoute>
+          </Route>
           <Route path="/venues">
             <RoleRoute allow={["admin", "organiser"]}>{() => <Venues />}</RoleRoute>
           </Route>
@@ -2206,7 +2343,7 @@ function Router() {
             <AuthRoute>{() => <DashboardLayout><Profile /></DashboardLayout>}</AuthRoute>
           </Route>
           <Route path="/settings">
-            <RoleRoute allow={["admin", "organiser"]}>{() => <Settings />}</RoleRoute>
+            <RoleRoute allow={["admin"]}>{() => <Settings />}</RoleRoute>
           </Route>
 
           {/* Redirect root to login or dashboard */}

@@ -12,6 +12,8 @@ import {
   updateMemberStatus,
   removeMember,
   getMemberStats,
+  listOrganisers,
+  updateOrganiser,
 } from "../controllers/auth";
 import { authenticate, authorize } from "../middleware/auth";
 
@@ -52,5 +54,9 @@ router.delete(
   authorize("admin", "organiser"),
   removeMember,
 );
+
+// Organiser management (admin only)
+router.get("/auth/organisers", authenticate, authorize("admin"), listOrganisers);
+router.patch("/auth/organisers/:id", authenticate, authorize("admin"), updateOrganiser);
 
 export default router;

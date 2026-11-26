@@ -708,3 +708,114 @@ export function getMemberStats(req: Request, res: Response): void {
     res.status(500).json({ success: false, message: "Internal server error" });
   });
 }
+
+// ========== ORGANISER MANAGEMENT (ADMIN ONLY) ==========
+
+export function listOrganisers(req: Request, res: Response): void {
+  (async () => {
+    const db = getDb(req);
+    const search = typeof req.query.search === "string" ? req.query.search.trim().toLowerCase() : "";
+
+    let sql = "SELECT * FROM users WHERE role_name = 'organiser'";
+    const values: unknown[] = [];
+    if (search) {
+      sql += " AND (LOWER(name) LIKE ? OR LOWER(email) LIKE ?)";
+      const s = `%${search}%`;
+      values.push(s, s);
+    }
+    sql += " ORDER BY created_at DESC";
+
+    const result = await db.prepare(sql).bind(...values).all();
+
+    res.json({
+      success: true,
+      message: "Organisers retrieved",
+      data: result.results.map((u: any) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role_name,
+        status: u.status,
+        createdAt: u.created_at,
+      })),
+    });
+  })().catch((err) => {
+    logger.error({ err }, "List organisers error");
+    res.status(500).json({ success: false, message: "Internal server error" });
+  });
+}
+
+const OrganiserUpdateSchema = z.object({
+  name: z.string().min(1).optional(),
+  email: z.string().email().optional(),
+  status: z.enum(["active", "inactive"]).optional(),
+});
+
+export function updateOrganiser(req: Request, res: Response): void {
+  (async () => {
+    const parseResult = OrganiserUpdateSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid input",
+        errors: parseResult.error.flatten().fieldErrors,
+      });
+      return;
+    }
+
+    const userId = req.params.id;
+    const db = getDb(req);
+
+    const user = await db.prepare("SELECT * FROM users WHERE id = ?").bind(userId).first();
+    if (!user) {
+      res.status(404).json({ success: false, message: "Organiser not found" });
+      return;
+    }
+    if ((user as any).role_name !== "organiser") {
+      res.status(403).json({ success: false, message: "Only organiser accounts can be managed here" });
+      return;
+    }
+
+    const { name, email, status } = parseResult.data;
+    if (email && email.toLowerCase().trim() !== String((user as any).email).toLowerCase()) {
+      const existing = await db
+        .prepare("SELECT id FROM users WHERE lower(email) = ? AND id != ?")
+        .bind(email.toLowerCase().trim(), userId)
+        .first();
+      if (existing) {
+        res.status(409).json({ success: false, message: "An account with this email already exists" });
+        return;
+      }
+    }
+
+    const fields: string[] = [];
+    const values: unknown[] = [];
+    if (name) { fields.push("name = ?"); values.push(name); }
+    if (email) { fields.push("email = ?"); values.push(email.toLowerCase().trim()); }
+    if (status) { fields.push("status = ?"); values.push(status); }
+
+    if (fields.length > 0) {
+      values.push(userId);
+      await db.prepare(`UPDATE users SET ${fields.join(", ")} WHERE id = ?`).bind(...values).run();
+    }
+
+    logActivity(req.user?.id, "update_organiser", { targetId: userId, changes: parseResult.data });
+
+    const updated = await db.prepare("SELECT * FROM users WHERE id = ?").bind(userId).first<any>();
+    res.json({
+      success: true,
+      message: "Organiser updated successfully",
+      data: {
+        id: updated.id,
+        name: updated.name,
+        email: updated.email,
+        role: updated.role_name,
+        status: updated.status,
+        createdAt: updated.created_at,
+      },
+    });
+  })().catch((err) => {
+    logger.error({ err }, "Update organiser error");
+    res.status(500).json({ success: false, message: "Internal server error" });
+  });
+}

@@ -12,6 +12,7 @@ import {
   BarChart3,
   LogOut,
   Settings2,
+  ShieldCheck,
   Plus,
   ChevronRight,
   Menu,
@@ -33,6 +34,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/conferences", label: "Conferences", icon: CalendarDays, roles: ["admin", "organiser"] },
   { href: "/speakers", label: "Speakers", icon: UserRound, roles: ["admin", "organiser"] },
   { href: "/attendees", label: "Attendees", icon: UsersRound, roles: ["admin", "organiser"] },
+  { href: "/organisers", label: "Organisers", icon: ShieldCheck, roles: ["admin"] },
   { href: "/venues", label: "Venues", icon: Building2, roles: ["admin", "organiser"] },
   { href: "/schedule", label: "Schedule", icon: Clock3, roles: ["admin", "organiser"] },
   { href: "/documents", label: "Documents", icon: Library, roles: ["admin", "organiser", "speaker"] },
@@ -43,7 +45,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/schedule", label: "Sessions", icon: Clock3, roles: ["attendee"] },
   { href: "/schedule", label: "My schedule", icon: Clock3, roles: ["speaker"] },
   { href: "/profile", label: "Profile", icon: UserRound, roles: ["admin", "organiser", "speaker", "attendee"] },
-  { href: "/settings", label: "Settings", icon: Settings2, roles: ["admin", "organiser"] },
+  { href: "/settings", label: "Settings", icon: Settings2, roles: ["admin"] },
 ];
 
 // Primary items for mobile bottom bar (resolved per role below)
