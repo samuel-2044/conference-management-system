@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/context/auth-context";
 import {
   useListConferences,
@@ -19,33 +18,36 @@ import { Button } from "@/components/ui/button";
 
 export function AdminDashboard() {
   const { user } = useAuth();
-  const { data: conferences } = useListConferences();
-  const { data: speakers } = useListSpeakers();
-  const { data: venues } = useListVenues();
-  const { data: report } = useGetRegistrationReport();
+  const { data: conferences, isLoading: loadingConferences } = useListConferences();
+  const { data: speakers, isLoading: loadingSpeakers } = useListSpeakers();
+  const { data: venues, isLoading: loadingVenues } = useListVenues();
+  const { data: report, isLoading: loadingReport } = useGetRegistrationReport();
+
+  const loading =
+    loadingConferences || loadingSpeakers || loadingVenues || loadingReport;
 
   const stats = [
     {
       label: "Conferences",
-      value: conferences?.length ?? 0,
+      value: loading ? "-" : conferences?.length ?? 0,
       icon: CalendarDays,
       description: "Total conferences",
     },
     {
       label: "Registrations",
-      value: report?.total ?? 0,
+      value: loading ? "-" : report?.total ?? 0,
       icon: UsersRound,
       description: "Conference registrations",
     },
     {
       label: "Speakers",
-      value: speakers?.length ?? 0,
+      value: loading ? "-" : speakers?.length ?? 0,
       icon: UserRound,
       description: "Registered speakers",
     },
     {
       label: "Venues",
-      value: venues?.length ?? 0,
+      value: loading ? "-" : venues?.length ?? 0,
       icon: Building2,
       description: "Available venues",
     },
@@ -69,12 +71,12 @@ export function AdminDashboard() {
             Welcome back, {user?.name || "Administrator"}. System overview and management.
           </p>
         </div>
-        <Link href="/conferences">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
+        <Button asChild>
+          <Link href="/conferences">
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
             New conference
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -88,10 +90,10 @@ export function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">{stat.label}</p>
                 <div className="rounded-lg bg-primary/10 p-2">
-                  <Icon className="h-5 w-5 text-primary" />
+                  <Icon className="h-5 w-5 text-primary" aria-hidden="true" />
                 </div>
               </div>
-              <h2 className="mt-5 text-3xl font-bold">{stat.value}</h2>
+              <p className="mt-5 text-3xl font-bold">{stat.value}</p>
               <p className="mt-2 text-xs text-muted-foreground">{stat.description}</p>
             </div>
           );
@@ -105,17 +107,20 @@ export function AdminDashboard() {
         </p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mt-5">
           {actions.map((action) => (
-            <Link key={action.href} href={action.href}>
-              <Button variant="outline" className="justify-between h-12 w-full">
+            <Button
+              key={action.href}
+              asChild
+              variant="outline"
+              className="justify-between h-12 w-full"
+            >
+              <Link href={action.href}>
                 {action.label}
-                <ArrowUpRight className="h-4 w-4" />
-              </Button>
-            </Link>
+                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </Button>
           ))}
         </div>
       </div>
     </div>
   );
 }
-
-          
