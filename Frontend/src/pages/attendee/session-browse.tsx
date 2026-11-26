@@ -52,7 +52,7 @@ export function SessionBrowsePage() {
       <Toaster />
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Available Sessions</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground" data-testid="session-browse-description">
           Browse and register for sessions. Registering for a session reserves your seat.
         </p>
       </div>
