@@ -242,10 +242,12 @@ const isAttendeeAvailableForSession = async (
 router.get("/dashboard/summary", authenticate, asyncHandler(async (_req, res) => {
   const db = getDb(_req);
 
-  const [confResult, speakerResult, sessionResult] = await Promise.all([
+  const [confResult, speakerResult, sessionResult, attendeeResult, registrationResult] = await Promise.all([
     db.prepare("SELECT COUNT(*) as count FROM conferences").first(),
-    db.prepare("SELECT COUNT(*) as count FROM users WHERE role_name = 'speaker'").first(),
+    db.prepare("SELECT COUNT(*) as count FROM speakers").first(),
     db.prepare("SELECT COUNT(*) as count FROM sessions").first(),
+    db.prepare("SELECT COUNT(*) as count FROM users WHERE role_name = 'attendee'").first(),
+    db.prepare("SELECT COUNT(*) as count FROM conference_attendees WHERE status != 'cancelled'").first(),
   ]);
 
   const activities: Activity[] = [
@@ -260,8 +262,8 @@ router.get("/dashboard/summary", authenticate, asyncHandler(async (_req, res) =>
 
   res.json(
     GetDashboardSummaryResponse.parse({
-      activeConferences: (conferences.results as any[]).length,
-      totalAttendees: (confResult as { count: number })?.count ?? 0,
+      activeConferences: (confResult as { count: number })?.count ?? (conferences.results as any[]).length,
+      totalAttendees: (attendeeResult as { count: number })?.count ?? 0,
       totalSpeakers: (speakerResult as { count: number })?.count ?? 0,
       totalSessions: (sessionResult as { count: number })?.count ?? 0,
       registrationTrend: [
@@ -783,14 +785,25 @@ router.get("/speakers", authenticate, authorize("organiser", "admin"), async (re
   sql += ` ORDER BY s.created_at DESC`;
 
   const result = await db.prepare(sql).bind(...values).all();
-  res.json(ListSpeakersResponse.parse(toCamel((result.results as any[]).map((s: any) => ({
+  const rows = result.results as any[];
+  const speakerIds = rows.map((r: any) => r.id).filter(Boolean);
+  let countMap = new Map<string, number>();
+  if (speakerIds.length > 0) {
+    const placeholders = speakerIds.map(() => "?").join(",");
+    const counts = await db
+      .prepare(`SELECT speaker_id, COUNT(*) as count FROM session_speakers WHERE speaker_id IN (${placeholders}) GROUP BY speaker_id`)
+      .bind(...speakerIds)
+      .all();
+    for (const c of (counts.results as any[])) countMap.set(c.speaker_id, Number(c.count) || 0);
+  }
+  res.json(ListSpeakersResponse.parse(toCamel(rows.map((s: any) => ({
     id: s.id,
     user_id: s.user_id,
     name: s.name ?? "Unknown",
     email: s.email ?? "",
     bio: s.bio,
     photo_url: s.photo_url,
-    session_count: 0,
+    session_count: countMap.get(s.id) ?? 0,
   })))));
 });
 
