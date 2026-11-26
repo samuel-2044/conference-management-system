@@ -26,6 +26,19 @@ import type {
   ListAvailableSessionsResponse,
 } from "./generated/api.schemas";
 
+export interface SessionSpeakerAssignment {
+  id: string;
+  sessionId: string;
+  speakerId: string;
+  speakerRole: "keynote" | "speaker" | "panelist" | "moderator";
+  createdAt: string;
+}
+export interface AddSessionSpeakerBody {
+  sessionId: string;
+  speakerId: string;
+  speakerRole?: "keynote" | "speaker" | "panelist" | "moderator";
+}
+
 type AwaitedInput<T> = PromiseLike<T> | T;
 type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -757,4 +770,95 @@ export function useListSessionRegistrations<
     queryKey: QueryKey;
   };
   return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+// ========== SESSION SPEAKERS (ASSIGNMENT) ==========
+
+export const addSessionSpeaker = async (
+  data: BodyType<AddSessionSpeakerBody>,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<SessionSpeakerAssignment> => {
+  return customFetch<SessionSpeakerAssignment>("/api/session-speakers", {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(data),
+  });
+};
+
+export const getAddSessionSpeakerMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addSessionSpeaker>>,
+    TError,
+    { data: BodyType<AddSessionSpeakerBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const mutationKey = ["addSessionSpeaker"];
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addSessionSpeaker>>,
+    { data: BodyType<AddSessionSpeakerBody> }
+  > = (props) => addSessionSpeaker(props.data, requestOptions);
+  return { mutationFn, mutationKey, ...mutationOptions };
+};
+
+export function useAddSessionSpeaker<TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addSessionSpeaker>>,
+    TError,
+    { data: BodyType<AddSessionSpeakerBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) {
+  return useMutation(getAddSessionSpeakerMutationOptions(options));
+}
+
+export const removeSessionSpeaker = async (
+  sessionSpeakerId: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<void> => {
+  return customFetch<void>(`/api/session-speakers/${sessionSpeakerId}`, {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getRemoveSessionSpeakerMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeSessionSpeaker>>,
+    TError,
+    { sessionSpeakerId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const mutationKey = ["removeSessionSpeaker"];
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeSessionSpeaker>>,
+    { sessionSpeakerId: string }
+  > = (props) => removeSessionSpeaker(props.sessionSpeakerId, requestOptions);
+  return { mutationFn, mutationKey, ...mutationOptions };
+};
+
+export function useRemoveSessionSpeaker<TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeSessionSpeaker>>,
+    TError,
+    { sessionSpeakerId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) {
+  return useMutation(getRemoveSessionSpeakerMutationOptions(options));
 }

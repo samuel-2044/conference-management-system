@@ -1450,6 +1450,32 @@ router.delete("/session-speakers/:sessionSpeakerId", authenticate, authorize("or
   res.status(204).send();
 });
 
+router.get("/sessions/:sessionId/speakers", authenticate, async (req, res) => {
+  const db = getDb(req);
+  const sessionId = req.params.sessionId;
+  const rows = await db
+    .prepare(`
+      SELECT ss.id, ss.session_id, ss.speaker_id, ss.speaker_role, ss.created_at,
+             u.name as speaker_name, u.email as speaker_email
+      FROM session_speakers ss
+      INNER JOIN speakers sp ON sp.id = ss.speaker_id
+      INNER JOIN users u ON u.id = sp.user_id
+      WHERE ss.session_id = ?
+      ORDER BY ss.created_at ASC
+    `)
+    .bind(sessionId)
+    .all();
+  res.json((rows.results as any[]).map((r: any) => ({
+    id: r.id,
+    sessionId: r.session_id,
+    speakerId: r.speaker_id,
+    speakerRole: r.speaker_role,
+    createdAt: r.created_at,
+    speakerName: r.speaker_name ?? "Unknown",
+    speakerEmail: r.speaker_email ?? "",
+  })));
+});
+
 router.get("/speakers/me/sessions", authenticate, authorize("speaker"), async (req, res) => {
   const db = getDb(req);
   const userId = req.user?.id;

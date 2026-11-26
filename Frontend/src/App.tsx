@@ -16,6 +16,7 @@ import {
   useDeleteConference, useDeleteSpeaker, useDeleteVenue, useGetConference,
   useGetDashboardSummary, useGetRegistrationReport, useListAttendees, useListConferences,
   useListDocuments, useListSessions, useListSpeakers, useListVenues, useUpdateConference,
+  useAddSessionSpeaker, useRemoveSessionSpeaker,
 } from "@workspace/api-client-react";
 import type { Attendee, Conference, ConferenceDetail, ConferenceInput, Document as ConferenceDocument, Session, Speaker, SpeakerInput, Venue, VenueInput } from "@workspace/api-client-react";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -520,14 +521,44 @@ function ConferenceCard({ conference }: { conference: Conference }) {
 function ConferenceDetailPage() {
   const { id = "" } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
-  const [tab, setTab] = useState("overview");
   const [editing, setEditing] = useState(false);
+  const [assignSessionId, setAssignSessionId] = useState<string>("");
+  const [assignSpeakerId, setAssignSpeakerId] = useState<string>("");
+  const [assignRole, setAssignRole] = useState<"keynote" | "speaker" | "panelist" | "moderator">("speaker");
+  const [sessionSpeakers, setSessionSpeakers] = useState<Record<string, any[]>>({});
   const updateMutation = useUpdateConference();
   const deleteMutation = useDeleteConference();
+  const addSessionSpeaker = useAddSessionSpeaker();
+  const removeSessionSpeaker = useRemoveSessionSpeaker();
   const query = useGetConference(id, {
     query: { enabled: !!id, queryKey: getGetConferenceQueryKey(id) },
   });
+  const sessionsQuery = useListSessions({ conferenceId: id }, { query: { enabled: !!id } });
+  const speakersQuery = useListSpeakers();
+  const venuesQuery = useListVenues({ conferenceId: id }, { query: { enabled: !!id } });
   const conference = query.data as ConferenceDetail | undefined;
+  const sessions = (sessionsQuery.data ?? []) as Session[];
+  const speakers = (speakersQuery.data ?? []) as Speaker[];
+  const venues = (venuesQuery.data ?? []) as Venue[];
+
+  const venueMap = useMemo(() => new Map(venues.map((v) => [v.id, v.name])), [venues]);
+  const assignedSpeakerIds = useMemo(() => {
+    const ids = new Set<string>();
+    Object.values(sessionSpeakers).forEach((arr) => arr.forEach((a: any) => ids.add(a.speakerId)));
+    return ids;
+  }, [sessionSpeakers]);
+
+  const loadSessionSpeakers = async (sessionId: string) => {
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+    const res = await fetch(`${apiUrl}/api/sessions/${sessionId}/speakers`, { credentials: "include" });
+    if (!res.ok) return;
+    const data = await res.json();
+    setSessionSpeakers((prev) => ({ ...prev, [sessionId]: Array.isArray(data) ? data : [] }));
+  };
+
+  useEffect(() => {
+    sessions.forEach((s) => { void loadSessionSpeakers(s.id); });
+  }, [sessions.map((s) => s.id).join(",")]);
 
   if (query.isLoading) return <PageFrame><LoadingRows count={5} /></PageFrame>;
   if (query.isError || !conference)
@@ -538,6 +569,24 @@ function ConferenceDetailPage() {
         </QueryState>
       </PageFrame>
     );
+
+  const handleAssign = () => {
+    if (!assignSessionId || !assignSpeakerId) {
+      toast.error("Select a session and speaker");
+      return;
+    }
+    addSessionSpeaker.mutate(
+      { data: { sessionId: assignSessionId, speakerId: assignSpeakerId, speakerRole: assignRole } },
+      {
+        onSuccess: () => {
+          toast.success("Speaker assigned to session");
+          void loadSessionSpeakers(assignSessionId);
+          setAssignSpeakerId("");
+        },
+        onError: (err: any) => toast.error(err?.message || "Failed to assign speaker"),
+      },
+    );
+  };
 
   return (
     <PageFrame>
@@ -602,27 +651,81 @@ function ConferenceDetailPage() {
         </div>
       </div>
       <div className="mt-6 grid gap-5 md:grid-cols-3">
-        <DetailStat
-          label="Attendees"
-          value={conference.attendeesCount || 0}
-          icon={UsersRound}
-        />
-        <DetailStat label="Sessions" value={0} icon={CalendarDays} />
-        <DetailStat label="Speakers" value={0} icon={UserRound} />
+        <DetailStat label="Attendees" value={conference.attendeesCount || 0} icon={UsersRound} />
+        <DetailStat label="Sessions" value={sessions.length} icon={CalendarDays} />
+        <DetailStat label="Speakers assigned" value={assignedSpeakerIds.size} icon={UserRound} />
       </div>
-      <div className="mt-6 grid gap-5 md:grid-cols-2">
+      <div className="mt-6 grid gap-5 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-6">
           <h2 className="text-lg font-bold">Sessions</h2>
-          <SimpleDetailList
-            sessions={[]}
-            empty="No sessions yet. Add sessions to build your programme."
-          />
+          <p className="mt-1 text-sm text-muted-foreground">Conference sessions and assigned speakers.</p>
+          <div className="mt-4 grid gap-3">
+            {sessions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No sessions yet. Add sessions from Schedule.</p>
+            ) : sessions.map((session) => {
+              const assigned = sessionSpeakers[session.id] ?? [];
+              return (
+                <div key={session.id} className="rounded-lg border border-border p-4">
+                  <div className="font-semibold">{session.title}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {timeLabel(session.startTime)} – {timeLabel(session.endTime)} · {session.venueId ? (venueMap.get(session.venueId) ?? "TBD") : "TBD"}
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {assigned.length === 0 ? (
+                      <div className="text-xs text-muted-foreground">No speaker assigned.</div>
+                    ) : assigned.map((a: any) => (
+                      <div key={a.id} className="flex items-center justify-between gap-2 rounded-md bg-secondary/40 px-2 py-1.5 text-xs">
+                        <span><span className="font-medium">{a.speakerName}</span> <span className="text-muted-foreground">({a.speakerRole})</span></span>
+                        <button
+                          className="text-destructive hover:underline"
+                          disabled={removeSessionSpeaker.isPending}
+                          onClick={() => removeSessionSpeaker.mutate({ sessionSpeakerId: a.id }, {
+                            onSuccess: () => { toast.success("Speaker removed from session"); void loadSessionSpeakers(session.id); },
+                            onError: (err: any) => toast.error(err?.message || "Failed to remove speaker"),
+                          })}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
+
         <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="text-lg font-bold">Speakers</h2>
-          <p className="text-sm text-muted-foreground">
-            Assign speakers to sessions from the Speakers section.
-          </p>
+          <h2 className="text-lg font-bold">Assign speaker to session</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Organisers/admins can assign speakers to conference sessions.</p>
+          <div className="mt-4 grid gap-3">
+            <label className="grid gap-1.5 text-sm font-medium">
+              Session
+              <select className="h-10 rounded-lg border border-input bg-background px-3 text-sm" value={assignSessionId} onChange={(e) => setAssignSessionId(e.target.value)}>
+                <option value="">Select session</option>
+                {sessions.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
+              </select>
+            </label>
+            <label className="grid gap-1.5 text-sm font-medium">
+              Speaker
+              <select className="h-10 rounded-lg border border-input bg-background px-3 text-sm" value={assignSpeakerId} onChange={(e) => setAssignSpeakerId(e.target.value)}>
+                <option value="">Select speaker</option>
+                {speakers.map((sp) => <option key={sp.id} value={sp.id}>{sp.name} ({sp.email})</option>)}
+              </select>
+            </label>
+            <label className="grid gap-1.5 text-sm font-medium">
+              Role
+              <select className="h-10 rounded-lg border border-input bg-background px-3 text-sm" value={assignRole} onChange={(e) => setAssignRole(e.target.value as any)}>
+                <option value="speaker">Speaker</option>
+                <option value="keynote">Keynote</option>
+                <option value="panelist">Panelist</option>
+                <option value="moderator">Moderator</option>
+              </select>
+            </label>
+            <Button onClick={handleAssign} disabled={addSessionSpeaker.isPending || !assignSessionId || !assignSpeakerId}>
+              {addSessionSpeaker.isPending ? "Assigning…" : "Assign speaker"}
+            </Button>
+          </div>
         </div>
       </div>
       {editing && (
@@ -631,9 +734,8 @@ function ConferenceDetailPage() {
           onClose={() => setEditing(false)}
           onSaved={() => {
             setEditing(false);
-            queryClient.invalidateQueries({
-              queryKey: getGetConferenceQueryKey(id),
-            });
+            queryClient.invalidateQueries({ queryKey: getGetConferenceQueryKey(id) });
+            queryClient.invalidateQueries({ queryKey: getListConferencesQueryKey() });
           }}
           updateMutation={updateMutation}
         />
@@ -707,7 +809,11 @@ function EditConferenceModal({
   updateMutation: ReturnType<typeof useUpdateConference>;
 }) {
   const [title, setTitle] = useState(conference.title);
-  const [description, setDescription] = useState(conference.description);
+  const [description, setDescription] = useState(conference.description || "");
+  const [startDate, setStartDate] = useState(String(conference.startDate).slice(0, 10));
+  const [endDate, setEndDate] = useState(String(conference.endDate).slice(0, 10));
+  const [capacity, setCapacity] = useState(conference.capacity != null ? String(conference.capacity) : "");
+  const [status, setStatus] = useState(conference.status || "draft");
 
   return (
     <Modal title="Edit conference" onClose={onClose}>
@@ -718,7 +824,14 @@ function EditConferenceModal({
           updateMutation.mutate(
             {
               conferenceId: conference.id,
-              data: { title, description },
+              data: {
+                title,
+                description,
+                startDate,
+                endDate,
+                status: status as any,
+                ...(capacity ? { capacity: Number(capacity) } : {}),
+              },
             },
             {
               onSuccess: () => { toast.success("Conference updated"); onSaved(); },
@@ -727,27 +840,28 @@ function EditConferenceModal({
           );
         }}
       >
-        <Field
-          label="Conference title"
-          value={title}
-          onChange={setTitle}
-          required
-          testId="input-edit-conference-title"
-        />
-        <Field
-          label="Description"
-          value={description}
-          onChange={setDescription}
-          multiline
-          testId="input-edit-conference-description"
-        />
+        <Field label="Conference title" value={title} onChange={setTitle} required testId="input-edit-conference-title" />
+        <Field label="Description" value={description} onChange={setDescription} multiline testId="input-edit-conference-description" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Start date" type="date" value={startDate} onChange={setStartDate} required testId="input-edit-conference-start" />
+          <Field label="End date" type="date" value={endDate} onChange={setEndDate} required testId="input-edit-conference-end" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="grid gap-1.5 text-sm font-medium">
+            Status
+            <select className="h-10 rounded-lg border border-input bg-background px-3 text-sm" value={status} onChange={(e) => setStatus(e.target.value)} data-testid="select-edit-conference-status">
+              <option value="draft">Draft</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="ongoing">Ongoing</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </label>
+          <Field label="Capacity" type="number" value={capacity} onChange={setCapacity} placeholder="e.g. 300" testId="input-edit-conference-capacity" />
+        </div>
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="ghost" onClick={onClose} testId="button-cancel-edit-conference">
-            Cancel
-          </Button>
-          <Button type="submit" disabled={updateMutation.isPending} testId="button-save-conference">
-            Save changes
-          </Button>
+          <Button variant="ghost" onClick={onClose} testId="button-cancel-edit-conference">Cancel</Button>
+          <Button type="submit" disabled={updateMutation.isPending} testId="button-save-conference">Save changes</Button>
         </div>
       </form>
     </Modal>
