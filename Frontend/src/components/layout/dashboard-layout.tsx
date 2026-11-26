@@ -93,7 +93,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
           <div>
             <div className="display-font text-lg font-bold tracking-tight">Convene</div>
-            <div className="mono-font text-[9px] uppercase tracking-[.22em] text-[hsl(var(--sidebar-foreground)/.55)]">
+            <div className="mono-font text-[8px] uppercase tracking-[.22em] text-[hsl(var(--sidebar-foreground)/.55)]">
               Management system
             </div>
           </div>
