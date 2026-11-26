@@ -121,7 +121,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 onClick={() => setMobileOpen(false)}
                 data-testid={`link-${item.label.toLowerCase()}`}
                 className={cn(
-                  "group flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  "group flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   "text-[hsl(var(--sidebar-foreground)/.82)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-white",
                   isActive
                     ? "bg-[hsl(var(--sidebar-primary))] font-semibold text-white shadow-sm"
