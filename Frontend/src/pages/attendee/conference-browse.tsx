@@ -52,7 +52,7 @@ export function ConferenceBrowsePage() {
       <Toaster />
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Available Conferences</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground" data-testid="browse-description">
           Browse and register for upcoming conferences.
         </p>
       </div>
