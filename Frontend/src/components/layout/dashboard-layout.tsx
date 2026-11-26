@@ -40,7 +40,8 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/documents", label: "Documents", icon: Library, roles: ["admin", "organiser", "speaker"] },
   { href: "/reports", label: "Reports", icon: BarChart3, roles: ["admin", "organiser"] },
   // Participant
-  { href: "/conferences", label: "Browse conferences", icon: CalendarDays, roles: ["attendee", "speaker"] },
+  { href: "/conferences", label: "Conferences", icon: CalendarDays, roles: ["attendee"] },
+  { href: "/conferences", label: "Browse conferences", icon: CalendarDays, roles: ["speaker"] },
   { href: "/my-registrations", label: "My registrations", icon: UsersRound, roles: ["attendee"] },
   { href: "/schedule", label: "Sessions", icon: Clock3, roles: ["attendee"] },
   { href: "/schedule", label: "My schedule", icon: Clock3, roles: ["speaker"] },
