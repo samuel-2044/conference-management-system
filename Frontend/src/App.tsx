@@ -1498,12 +1498,16 @@ const DOC_TYPES = [
   { value: "all", label: "All" },
   { value: "id-card", label: "Student/National ID" },
   { value: "image", label: "Profile picture" },
-  { value: "paper", label: "Speaker CV" },
+  { value: "paper", label: "Speaker CV", roles: ["speaker", "admin", "organiser"] },
   { value: "certificate", label: "Rules / Important" },
 ] as const;
 
-function docTypeLabel(type: string) {
-  const found = DOC_TYPES.find((d) => d.value === type);
+function visibleDocTypes(role: string | undefined) {
+  return DOC_TYPES.filter((d) => !("roles" in d) || (d.roles as readonly string[]).includes(role || ""));
+}
+
+function docTypeLabel(type: string, role?: string) {
+  const found = visibleDocTypes(role).find((d) => d.value === type) ?? DOC_TYPES.find((d) => d.value === type);
   return found?.label ?? type;
 }
 
@@ -1514,6 +1518,11 @@ function canUploadDocType(role: string | undefined, type: string) {
   return false;
 }
 
+function canViewDocument(role: string | undefined, type: string) {
+  if (type === "paper") return role === "speaker" || role === "admin" || role === "organiser";
+  return true;
+}
+
 function Documents() {
   const { user } = useAuth();
   const [type, setType] = useState("all");
@@ -1521,8 +1530,9 @@ function Documents() {
   const query = useListDocuments({
     type: type as "all" | "paper" | "id-card" | "certificate" | "image",
   });
-  const docs = query.data ?? [];
-  const allowedUploadTypes = DOC_TYPES.filter((d) => d.value !== "all" && canUploadDocType(user?.role, d.value));
+  const docs = (query.data ?? []).filter((d: any) => canViewDocument(user?.role, d.type));
+  const availableDocTypes = visibleDocTypes(user?.role);
+  const allowedUploadTypes = availableDocTypes.filter((d) => d.value !== "all" && canUploadDocType(user?.role, d.value));
 
   return (
     <PageFrame>
@@ -1539,7 +1549,7 @@ function Documents() {
         }
       />
       <div className="mb-5 flex gap-2 overflow-x-auto">
-        {DOC_TYPES.map((item) => (
+        {availableDocTypes.map((item) => (
           <button
             key={item.value}
             onClick={() => setType(item.value)}
@@ -1565,7 +1575,7 @@ function Documents() {
       >
         <div className="grid gap-3">
           {docs.map((doc) => (
-            <DocumentRow key={doc.id} document={doc} />
+            <DocumentRow key={doc.id} document={doc} role={user?.role} />
           ))}
         </div>
       </QueryState>
@@ -1576,7 +1586,7 @@ function Documents() {
   );
 }
 
-function DocumentRow({ document }: { document: ConferenceDocument }) {
+function DocumentRow({ document, role }: { document: ConferenceDocument; role?: string }) {
   return (
     <div
       className="flex items-center gap-4 rounded-xl border border-border bg-card p-4"
@@ -1588,7 +1598,7 @@ function DocumentRow({ document }: { document: ConferenceDocument }) {
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-bold">{document.fileName}</div>
           <div className="mt-1 text-xs text-muted-foreground">
-            {docTypeLabel(document.type)} · {document.fileSize} · uploaded{" "}
+            {docTypeLabel(document.type, role)} · {document.fileSize} · uploaded{" "}
             {dateLabel(document.createdAt as unknown as string)}
           </div>
         </div>
