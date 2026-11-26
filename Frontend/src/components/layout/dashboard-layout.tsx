@@ -153,7 +153,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           <Button
             onClick={handleLogout}
             variant="ghost"
-            className="mt-2 w-full h-9 text-[hsl(var(--sidebar-foreground)/.82)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-white flex items-center justify-center gap-2"
+            className="mt-2 w-full h-8 text-[hsl(var(--sidebar-foreground)/.82)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-white flex items-center justify-center gap-2"
             data-testid="button-logout"
           >
             <LogOut className="h-4 w-4" /> Logout
