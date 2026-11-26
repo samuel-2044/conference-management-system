@@ -80,4 +80,42 @@ export function AdminDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
+          return (
+            <div
+              key={stat.label}
+              className="rounded-xl border bg-card p-5 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">{stat.label}</p>
+                <div className="rounded-lg bg-primary/10 p-2">
+                  <Icon className="h-5 w-5 text-primary" />
+                </div>
+              </div>
+              <h2 className="mt-5 text-3xl font-bold">{stat.value}</h2>
+              <p className="mt-2 text-xs text-muted-foreground">{stat.description}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="rounded-xl border bg-card p-6">
+        <h2 className="text-lg font-bold">Quick actions</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Manage conferences, people, venues, and reports.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mt-5">
+          {actions.map((action) => (
+            <Link key={action.href} href={action.href}>
+              <Button variant="outline" className="justify-between h-12 w-full">
+                {action.label}
+                <ArrowUpRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
           
