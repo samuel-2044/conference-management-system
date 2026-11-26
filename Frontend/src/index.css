@@ -385,6 +385,7 @@
   h1, h2, h3, h4 { text-wrap: balance; }
   button, a, input, select, textarea { transition: color .18s ease, background-color .18s ease, border-color .18s ease, transform .18s ease, opacity .18s ease; }
   ::selection { background: hsl(var(--accent) / .35); }
+  :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
 }
 
 .app-shell {
