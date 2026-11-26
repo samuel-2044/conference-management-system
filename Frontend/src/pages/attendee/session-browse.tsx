@@ -64,7 +64,7 @@ export function SessionBrowsePage() {
       )}
 
       {!query.isLoading && (
-        <div className="grid gap-4">
+        <div className="grid gap-4" data-testid="session-grid">
           {sessions.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border bg-card p-12 text-center">
               <Clock3 className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
