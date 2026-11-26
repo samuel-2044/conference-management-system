@@ -66,7 +66,7 @@ export function ConferenceBrowsePage() {
  {!query.isLoading && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="conference-grid">
           {conferences.length === 0 ? (
-            <div className="col-span-3 rounded-xl border border-dashed border-border bg-card p-12 text-center">
+            <div className="col-span-3 rounded-xl border border-dashed border-border bg-card p-12 text-center" data-testid="conference-empty">
               <Clock3 className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
               <h3 className="font-semibold">No conferences available</h3>
               <p className="mt-1 text-sm text-muted-foreground">
