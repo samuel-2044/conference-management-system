@@ -37,7 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/organisers", label: "Organisers", icon: ShieldCheck, roles: ["admin"] },
   { href: "/venues", label: "Venues", icon: Building2, roles: ["admin", "organiser"] },
   { href: "/schedule", label: "Schedule", icon: Clock3, roles: ["admin", "organiser"] },
-  { href: "/documents", label: "Documents", icon: Library, roles: ["admin", "organiser", "speaker"] },
+  { href: "/documents", label: "Documents", icon: Library, roles: ["admin", "organiser", "speaker", "attendee"] },
   { href: "/reports", label: "Reports", icon: BarChart3, roles: ["admin", "organiser"] },
   // Participant
   { href: "/conferences", label: "Conferences", icon: CalendarDays, roles: ["attendee"] },

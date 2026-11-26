@@ -1380,6 +1380,26 @@ function SessionModal({
   );
 }
 
+const DOC_TYPES = [
+  { value: "all", label: "All" },
+  { value: "id-card", label: "Student/National ID" },
+  { value: "image", label: "Profile picture" },
+  { value: "paper", label: "Speaker CV" },
+  { value: "certificate", label: "Rules / Important" },
+] as const;
+
+function docTypeLabel(type: string) {
+  const found = DOC_TYPES.find((d) => d.value === type);
+  return found?.label ?? type;
+}
+
+function canUploadDocType(role: string | undefined, type: string) {
+  if (role === "admin" || role === "organiser") return true;
+  if (role === "attendee") return type === "id-card" || type === "image";
+  if (role === "speaker") return type === "id-card" || type === "image" || type === "paper";
+  return false;
+}
+
 function Documents() {
   const { user } = useAuth();
   const [type, setType] = useState("all");
@@ -1388,16 +1408,16 @@ function Documents() {
     type: type as "all" | "paper" | "id-card" | "certificate" | "image",
   });
   const docs = query.data ?? [];
-  const canUpload = user?.role === "admin" || user?.role === "organiser";
+  const allowedUploadTypes = DOC_TYPES.filter((d) => d.value !== "all" && canUploadDocType(user?.role, d.value));
 
   return (
     <PageFrame>
       <PageHeader
-        eyebrow="Library"
+        eyebrow="Documents"
         title="Documents"
-        body="One considered home for papers, badges, certificates, and the files that keep a conference moving."
+        body="Upload required documents and view rules/important documents shared by organisers."
         action={
-          canUpload ? (
+          allowedUploadTypes.length > 0 ? (
             <Button onClick={() => setShowUpload(true)} testId="button-open-upload">
               <CloudUpload className="h-4 w-4" /> Upload document
             </Button>
@@ -1405,19 +1425,19 @@ function Documents() {
         }
       />
       <div className="mb-5 flex gap-2 overflow-x-auto">
-        {["all", "paper", "id-card", "certificate", "image"].map((item) => (
+        {DOC_TYPES.map((item) => (
           <button
-            key={item}
-            onClick={() => setType(item)}
-            data-testid={`filter-document-${item}`}
+            key={item.value}
+            onClick={() => setType(item.value)}
+            data-testid={`filter-document-${item.value}`}
             className={cn(
-              "rounded-full border px-4 py-2 text-xs font-bold capitalize",
-              type === item
+              "rounded-full border px-4 py-2 text-xs font-bold whitespace-nowrap",
+              type === item.value
                 ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]"
                 : "border-border bg-card text-muted-foreground",
             )}
           >
-            {item.replace("-", " ")}
+            {item.label}
           </button>
         ))}
       </div>
@@ -1426,8 +1446,8 @@ function Documents() {
         error={query.isError}
         onRetry={() => query.refetch()}
         empty={!query.isLoading && docs.length === 0}
-        emptyTitle="Your library is empty"
-        emptyBody="Upload the files your team needs at hand."
+        emptyTitle="No documents found"
+        emptyBody="Required uploads and organiser-shared documents will appear here."
       >
         <div className="grid gap-3">
           {docs.map((doc) => (
@@ -1436,7 +1456,7 @@ function Documents() {
         </div>
       </QueryState>
       {showUpload && (
-        <UploadModal onClose={() => setShowUpload(false)} />
+        <UploadModal allowedTypes={allowedUploadTypes} onClose={() => setShowUpload(false)} />
       )}
     </PageFrame>
   );
@@ -1454,7 +1474,7 @@ function DocumentRow({ document }: { document: ConferenceDocument }) {
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-bold">{document.fileName}</div>
           <div className="mt-1 text-xs text-muted-foreground">
-            {document.type} · {document.fileSize} · uploaded{" "}
+            {docTypeLabel(document.type)} · {document.fileSize} · uploaded{" "}
             {dateLabel(document.createdAt as unknown as string)}
           </div>
         </div>
@@ -1470,18 +1490,19 @@ function DocumentRow({ document }: { document: ConferenceDocument }) {
   );
 }
 
-function UploadModal({ onClose }: { onClose: () => void }) {
+function UploadModal({ onClose, allowedTypes }: { onClose: () => void; allowedTypes: Array<{ value: string; label: string }> }) {
   const [file, setFile] = useState<File | null>(null);
+  const [docType, setDocType] = useState(allowedTypes[0]?.value ?? "id-card");
   const [uploaded, setUploaded] = useState(false);
 
   return (
-    <Modal title="Upload a document" onClose={onClose}>
+    <Modal title="Upload document" onClose={onClose}>
       {uploaded ? (
         <div className="py-8 text-center">
           <Check className="mx-auto h-8 w-8 text-emerald-700" />
-          <h3 className="mt-4 font-bold">Ready for your team</h3>
+          <h3 className="mt-4 font-bold">Document ready</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            {file?.name} has been added to this upload queue.
+            {file?.name} ({docTypeLabel(docType)}) has been added.
           </p>
           <Button className="mt-5" onClick={onClose} testId="button-close-upload-success">
             Done
@@ -1489,6 +1510,19 @@ function UploadModal({ onClose }: { onClose: () => void }) {
         </div>
       ) : (
         <div className="grid gap-5">
+          <label className="grid gap-2 text-sm font-medium">
+            Document type
+            <select
+              value={docType}
+              onChange={(e) => setDocType(e.target.value)}
+              className="h-10 rounded-lg border border-input bg-card px-3 text-sm"
+              data-testid="select-upload-document-type"
+            >
+              {allowedTypes.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+          </label>
           <label
             className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-secondary/40 px-5 py-12 text-center hover:border-[hsl(var(--primary)/.5)]"
           >
@@ -1515,7 +1549,7 @@ function UploadModal({ onClose }: { onClose: () => void }) {
               onClick={() => setUploaded(true)}
               testId="button-confirm-upload"
             >
-              Add to library
+              Upload
             </Button>
           </div>
         </div>
@@ -2334,7 +2368,7 @@ function Router() {
             <AuthRoute>{() => <DashboardLayout><SchedulePage /></DashboardLayout>}</AuthRoute>
           </Route>
           <Route path="/documents">
-            <RoleRoute allow={["admin", "organiser", "speaker"]}>{() => <Documents />}</RoleRoute>
+            <RoleRoute allow={["admin", "organiser", "speaker", "attendee"]}>{() => <Documents />}</RoleRoute>
           </Route>
           <Route path="/reports">
             <RoleRoute allow={["admin", "organiser"]}>{() => <Reports />}</RoleRoute>
