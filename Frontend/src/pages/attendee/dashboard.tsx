@@ -18,7 +18,7 @@ export function AttendeeDashboard() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-testid="stats-grid">
         {stats.map(({ label, value, icon: Icon }) => (
           <div key={label} className="rounded-xl border border-border bg-card p-5">
             <Icon className="h-4 w-4 text-[hsl(var(--primary))]" />
