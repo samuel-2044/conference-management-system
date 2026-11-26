@@ -2126,15 +2126,15 @@ function ToggleRow({
         aria-checked={checked}
         onClick={() => onChange(!checked)}
         className={cn(
-          "relative h-6 w-11 rounded-full transition-colors",
-          checked ? "bg-[hsl(var(--primary))]" : "bg-muted",
+          "relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--primary))] focus-visible:ring-offset-2",
+          checked ? "bg-[hsl(var(--primary))]" : "bg-[hsl(var(--muted-foreground)/.35)]",
         )}
         data-testid={testId}
       >
         <span
           className={cn(
-            "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform",
-            checked ? "translate-x-5" : "translate-x-0.5",
+            "pointer-events-none block h-5 w-5 rounded-full bg-white shadow-md ring-0 transition-transform duration-200",
+            checked ? "translate-x-5" : "translate-x-1",
           )}
         />
       </button>
