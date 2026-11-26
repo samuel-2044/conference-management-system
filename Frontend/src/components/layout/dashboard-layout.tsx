@@ -107,7 +107,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           </button>
         </div>
 
-        <div className="px-3 text-[10px] font-bold uppercase tracking-[.2em] text-[hsl(var(--sidebar-foreground)/.65)]">
+        <div className="px-3 text-[11px] font-bold uppercase tracking-[.2em] text-[hsl(var(--sidebar-foreground)/.65)]">
           Navigation
         </div>
         <nav className="mt-3 grid gap-1 px-2">
