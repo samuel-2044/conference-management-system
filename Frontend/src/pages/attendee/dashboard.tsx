@@ -13,7 +13,7 @@ export function AttendeeDashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight" data-testid="dashboard-title">Attendee Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground" data-testid="dashboard-welcome">
           Browse conferences and register for sessions. Welcome back, {user?.name}.
         </p>
       </div>
