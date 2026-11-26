@@ -135,7 +135,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           })}
         </nav>
 
-        <div className="mt-4 px-2 pt-4 border-t border-[hsl(var(--sidebar-border))]">
+        <div className="mt-6 px-2 pt-4 border-t border-[hsl(var(--sidebar-border))]">
           <div className="px-1 text-[10px] font-bold uppercase tracking-[.2em] text-[hsl(var(--sidebar-foreground)/.65)] mb-2">
             Account
           </div>
