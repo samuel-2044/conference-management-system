@@ -56,3 +56,108 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
       }
+        setUser(null);
+    } catch {
+      // Network failure: keep the current state.
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMe();
+  }, [fetchMe]);
+
+  const login = useCallback(async (email: string, password: string) => {
+    const response = await fetch(`${API_URL}/api/auth/login`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || "Login failed");
+    }
+
+    setUser(toUser(data.data));
+  }, []);
+
+  const signup = useCallback(async (
+    name: string,
+    email: string,
+    password: string,
+    role: "attendee" | "speaker",
+  ) => {
+    const response = await fetch(`${API_URL}/api/auth/signup`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password, role }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || "Signup failed");
+    }
+
+    setUser(toUser(data.data));
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await fetch(`${API_URL}/api/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // Ignore network failures — the local session must still be cleared.
+    } finally {
+      setUser(null);
+    }
+  }, []);
+
+  const updateProfile = useCallback(async (data: { name?: string; email?: string }) => {
+    const response = await fetch(`${API_URL}/api/auth/me`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || "Failed to update profile");
+    }
+
+    setUser(toUser(result.data));
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      user,
+      isLoading,
+      isAuthenticated: !!user,
+      login,
+      signup,
+      logout,
+      fetchMe,
+      updateProfile,
+    }),
+    [user, isLoading, login, signup, logout, fetchMe, updateProfile],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+}
